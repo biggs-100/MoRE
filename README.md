@@ -7,6 +7,8 @@ MoRE is a modular, scalable architecture designed for high-performance classific
 - **R-Perceptron Core**: A resonant unit with lateral inhibition (WTA), diversity bias, and importance tracking.
 - **Local Learning**: Implements a contrastive Hebbian rule that strengthens prototypes on success and repels them on error.
 - **Novelty Gating**: Dual-output architecture that calculates a "Familiarity" score ($f$) to identify out-of-distribution (OOD) samples.
+- **FAISS Scaling**: Integrated hybrid search path (Dense for $M < 1024$, FAISS for $M \ge 1024$) achieving $3.3x$ speedup on $10^5$ prototypes.
+- **Autonomous Mitosis**: Experts autonomously split into specialized units when saturated (detected via high attention entropy and low familiarity).
 - **Scale Agnostic**: Validated across different embedding dimensions (128d synthetic to 384d real text).
 - **High Efficiency**: Extremely fast convergence and low computational overhead compared to gradient-based methods.
 

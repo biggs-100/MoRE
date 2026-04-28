@@ -1,0 +1,24 @@
+change_name: MoRE-Mitosis
+status: active
+current_phase: tasks
+persistence: openspec
+history:
+  - phase: initialization
+    status: completed
+    timestamp: "2026-04-28T15:46:50Z"
+  - phase: exploration
+    status: completed
+    timestamp: "2026-04-28T15:47:15Z"
+  - phase: proposal
+    status: completed
+    timestamp: "2026-04-28T15:47:25Z"
+  - phase: spec
+    status: completed
+    timestamp: "2026-04-28T15:48:10Z"
+  - phase: design
+    status: completed
+    timestamp: "2026-04-28T15:48:25Z"
+  - phase: tasks
+    status: completed
+    timestamp: "2026-04-28T15:48:40Z"
+next_recommended: apply
