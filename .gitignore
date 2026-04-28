@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.env
+Lib/
+Scripts/
+share/
+
+# PyTorch models
+*.pt
+*.pth
+
+# IDEs
+.vscode/
+.idea/
+
+# Data and logs
+*.log
+out.txt
+
+# Artifacts
+openspec/changes/MoRE-3-Demo/

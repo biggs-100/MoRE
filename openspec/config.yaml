@@ -1,0 +1,34 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Python 3.14, PyTorch, NumPy, Scikit-learn, Sentence-Transformers
+  Architecture: MoRE (Mixture of R-Experts)
+  Testing: pytest (Strict TDD Mode: enabled)
+  Style: PEP 8, Type hints, rich aesthetics
+
+strict_tdd: true
+
+rules:
+  proposal:
+    - Include novelty detection strategy
+    - Define expert architecture (R-Perceptron)
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Detail Hebbian learning rules
+    - Document WTA inhibition logic
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks small
+  apply:
+    - Follow established R-Perceptron patterns
+  verify:
+    - Run pytest for all unit tests
+    - Validate novelty gate threshold behavior
+
+testing:
+  strict_tdd: true
+  runner:
+    command: "py -m pytest"
+    framework: pytest

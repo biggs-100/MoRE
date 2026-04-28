@@ -1,0 +1,30 @@
+change_name: MoRE-3-Demo
+status: active
+current_phase: verify
+persistence: openspec
+history:
+  - phase: initialization
+    status: completed
+    timestamp: "2026-04-28T15:02:40Z"
+  - phase: exploration
+    status: completed
+    timestamp: "2026-04-28T15:02:50Z"
+  - phase: proposal
+    status: completed
+    timestamp: "2026-04-28T15:03:00Z"
+  - phase: spec
+    status: completed
+    timestamp: "2026-04-28T15:04:30Z"
+  - phase: design
+    status: completed
+    timestamp: "2026-04-28T15:04:50Z"
+  - phase: tasks
+    status: completed
+    timestamp: "2026-04-28T15:05:00Z"
+  - phase: apply
+    status: completed
+    timestamp: "2026-04-28T15:10:00Z"
+  - phase: verify
+    status: completed
+    timestamp: "2026-04-28T15:10:40Z"
+next_recommended: archive
