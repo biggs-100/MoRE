@@ -1,0 +1,54 @@
+\begin{thebibliography}{7}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Beyer et~al.(1999)Beyer, Goldstein, Ramakrishnan, and
+  Shaft]{beyer1999nearest}
+Kevin Beyer, Jonathan Goldstein, Raghu Ramakrishnan, and U~Shaft.
+\newblock When is ``nearest neighbor'' meaningful?
+\newblock In \emph{International Conference on Database Theory}, 1999.
+
+\bibitem[Graves et~al.(2016)Graves, Wayne, Danihelka, Tieleman,
+  et~al.]{graves2016hybrid}
+Alex Graves, Greg Wayne, Ivo Danihelka, Tibor Tieleman, et~al.
+\newblock Hybrid computing using a neural network with dynamic external memory.
+\newblock \emph{Nature}, 538:\penalty0 471--476, 2016.
+
+\bibitem[Hopfield(1982)]{hopfield1982neural}
+John~J Hopfield.
+\newblock Neural networks and physical systems with emergent collective
+  computational abilities.
+\newblock \emph{Proceedings of the National Academy of Sciences}, 79\penalty0
+  (8):\penalty0 2554--2558, 1982.
+
+\bibitem[Ramsauer et~al.(2020)Ramsauer, Sch{\"a}fl, Holitschke, Widrich,
+  Gr{\"u}nbach, Brandst{\"o}tter, Krems, Zellinger, Ecker, and
+  Aigner]{ramsauer2020hopfield}
+Hubert Ramsauer, Bernhard Sch{\"a}fl, Johannes Holitschke, Lukas Widrich,
+  Thomas Gr{\"u}nbach, Michael Brandst{\"o}tter, Friedrich Krems, Werner
+  Zellinger, Claudius~K Ecker, and Maximilian Aigner.
+\newblock Hopfield networks is all you need.
+\newblock \emph{arXiv preprint arXiv:2008.02217}, 2020.
+
+\bibitem[Shazeer et~al.(2017)Shazeer, Mirhoseini, et~al.]{shazeer2017moe}
+Noam Shazeer, Azalia Mirhoseini, et~al.
+\newblock Outrageously large neural networks: The sparsely-gated
+  mixture-of-experts layer.
+\newblock In \emph{International Conference on Learning Representations}, 2017.
+
+\bibitem[Snell et~al.(2017)Snell, Swersky, and Zemel]{snell2017prototypical}
+Jake Snell, Kevin Swersky, and Richard Zemel.
+\newblock Prototypical networks for few-shot learning.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2017.
+
+\bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez,
+  Kaiser, and Polosukhin]{vaswani2017attention}
+Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones,
+  Aidan~N Gomez, Lukasz Kaiser, and Illia Polosukhin.
+\newblock Attention is all you need.
+\newblock \emph{Advances in Neural Information Processing Systems}, 30, 2017.
+
+\end{thebibliography}
