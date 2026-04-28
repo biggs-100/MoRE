@@ -123,13 +123,10 @@ class MoRE(nn.Module):
         
         return True
 
-    def check_health_and_mitosis(self, threshold_h=None, threshold_f=0.5):
-        if threshold_h is None:
-            threshold_h = 0.6 * np.log(self.M)
-            
+    def check_health_and_mitosis(self, threshold_h=0.5, threshold_f=0.65):
         split_indices = []
         for i in range(len(self.experts) - 1, -1, -1):
-            if len(self.health_f[i]) >= 50:
+            if len(self.health_f[i]) >= 64:
                 avg_f = np.mean(self.health_f[i])
                 avg_h = np.mean(self.health_h[i])
                 

@@ -33,23 +33,19 @@ def run_grand_finale():
         X_aug += torch.randn_like(X_aug) * 0.005
         return X_aug[:target_n], y_aug[:target_n]
 
-    X_train, y_train = augment(X_train, y_train, target_n=450) # 150 per class
+    X_train, y_train = augment(X_train, y_train, target_n=450) 
     X_novel, y_novel = augment(X_novel, torch.zeros(len(X_novel)), target_n=200)
-    y_novel += 3 
+    y_novel += 3 # Health class
     
     X_all = torch.cat([X_train, X_novel])
     y_all = torch.cat([y_train, y_novel])
 
     # 2. Model Initialization with Bootstrap
-    # We initialize each expert's keys with the center of its class to avoid routing collapse
     model = MoRE(n_experts=3, d_input=384, M=32, theta=0.4)
     with torch.no_grad():
         for i in range(3):
             model.experts[i].keys.copy_(centers[i].repeat(32, 1) + torch.randn(32, 384)*0.01)
             model.experts[i]._normalize_keys()
-            # Also build FAISS index if needed (threshold is 1024, so not here, but good practice)
-            if model.experts[i].use_faiss and model.experts[i].M >= model.experts[i].faiss_threshold:
-                model.experts[i]._rebuild_index()
 
     # --- PHASE 1: REINFORCEMENT ---
     console.print("\n[bold green]PHASE 1: Reinforcing Sports, Tech, and Politics...[/bold green]")
@@ -69,12 +65,12 @@ def run_grand_finale():
                 model.experts[exp_idx].update_local(x_b[s_idx:s_idx+1], reward[s_idx:s_idx+1], all_attn[s_idx], lr=lr)
             progress.update(task, advance=1)
 
-    # Validation
+    # Initial Validation
     preds, fam = model.predict(X_train, threshold=0.3)
     acc = (preds == y_train).float().mean()
     console.log(f"Phase 1 Mastery: [bold green]{acc:.2%} Accuracy[/bold green] on known classes.")
     
-    preds_n, fam_n = model.predict(X_novel, threshold=0.5) # High threshold for novelty detection
+    preds_n, fam_n = model.predict(X_novel, threshold=0.5)
     rejection = (preds_n == -1).float().mean()
     console.log(f"Phase 1 Vigilance: [bold yellow]{rejection:.2%} Rejection[/bold yellow] of 'Health' (Novelty).")
 
@@ -82,7 +78,7 @@ def run_grand_finale():
     console.print("\n[bold yellow]PHASE 2: Introducing 'Health' class. Evolution Triggered...[/bold yellow]")
     
     growth_step = -1
-    for step in range(500):
+    for step in range(600):
         if step % 2 == 0:
             idx = torch.randint(0, len(X_novel), (16,))
             x_b, y_b = X_novel[idx], y_novel[idx]
@@ -98,14 +94,13 @@ def run_grand_finale():
             if exp_idx < len(model.experts):
                 model.experts[exp_idx].update_local(x_b[s_idx:s_idx+1], reward[s_idx:s_idx+1], all_attn[s_idx], lr=lr)
         
-        if step % 10 == 0:
-            # Stricter thresholds for mitosis to avoid explosion but allow growth
-            splits = model.check_health_and_mitosis(threshold_f=0.6, threshold_h=0.3)
+        # Trigger mitosis check every 20 steps
+        if step % 20 == 0:
+            splits = model.check_health_and_mitosis()
             if splits and growth_step == -1:
                 growth_step = step
                 console.log(f"[bold reverse green] !!! MITOSIS !!! [/bold reverse green] Architecture expanded at step {step}. Experts: [bold cyan]{len(model.experts)}[/bold cyan]")
-                # After mitosis, lower LR to stabilize
-                lr = 0.05
+                lr = 0.05 # Lower LR to stabilize after growth
 
     # --- FINAL VERIFICATION ---
     console.print("\n[bold rainbow]PHASE 3: Final Mastery Assessment[/bold rainbow]")
