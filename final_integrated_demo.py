@@ -77,8 +77,11 @@ def run_grand_finale():
     # --- PHASE 2: DISCOVERY & MITOSIS ---
     console.print("\n[bold yellow]PHASE 2: Introducing 'Health' class. Evolution Triggered...[/bold yellow]")
     
+    # RESET HEALTH
+    model.reset_health()
+    
     growth_step = -1
-    for step in range(600):
+    for step in range(1000):
         if step % 2 == 0:
             idx = torch.randint(0, len(X_novel), (16,))
             x_b, y_b = X_novel[idx], y_novel[idx]
@@ -94,13 +97,12 @@ def run_grand_finale():
             if exp_idx < len(model.experts):
                 model.experts[exp_idx].update_local(x_b[s_idx:s_idx+1], reward[s_idx:s_idx+1], all_attn[s_idx], lr=lr)
         
-        # Trigger mitosis check every 20 steps
         if step % 20 == 0:
             splits = model.check_health_and_mitosis()
             if splits and growth_step == -1:
                 growth_step = step
                 console.log(f"[bold reverse green] !!! MITOSIS !!! [/bold reverse green] Architecture expanded at step {step}. Experts: [bold cyan]{len(model.experts)}[/bold cyan]")
-                lr = 0.05 # Lower LR to stabilize after growth
+                lr = 0.05
 
     # --- FINAL VERIFICATION ---
     console.print("\n[bold rainbow]PHASE 3: Final Mastery Assessment[/bold rainbow]")

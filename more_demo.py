@@ -123,16 +123,23 @@ class MoRE(nn.Module):
         
         return True
 
-    def check_health_and_mitosis(self, threshold_h=0.5, threshold_f=0.65):
+    def check_health_and_mitosis(self, threshold_h=0.1, threshold_f=0.5):
         split_indices = []
         for i in range(len(self.experts) - 1, -1, -1):
             if len(self.health_f[i]) >= 64:
                 avg_f = np.mean(self.health_f[i])
                 avg_h = np.mean(self.health_h[i])
                 
-                # MITOSIS TRIGGER: Low familiarity AND High entropy
+                # MITOSIS TRIGGER: Surprise (low fam) AND moderate dispersion
                 if avg_f < threshold_f and avg_h > threshold_h:
                     if self.perform_mitosis(i):
                         split_indices.append(i)
                         
         return split_indices
+
+    def reset_health(self):
+        """Clears health monitoring deques for all experts."""
+        for i in range(len(self.experts)):
+            self.health_f[i].clear()
+            self.health_h[i].clear()
+            self.buffers[i].clear()
