@@ -10,6 +10,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta,shapes.geometric}
+\usepackage{caption}
+\captionsetup[table]{position=top, skip=6pt}
+\captionsetup[figure]{position=bottom, skip=6pt}
 
 % ===== COLOR PALETTE =====
 \definecolor{accent}{RGB}{42,104,163}
@@ -36,7 +39,7 @@
 
 \begin{abstract}
 \noindent 
-Modern deep learning architectures are fundamentally limited by their static structural capacity and their susceptibility to catastrophic forgetting. We introduce \textbf{MoRE-3}, a hierarchical mixture-of-experts architecture that achieves autonomous structural evolution and intrinsic novelty detection. At the core of MoRE-3 is the \textbf{R-Perceptron}, a neuro-symbolic unit that utilizes cosine resonance to distinguish known from unknown data via a sigmoid novelty gate $g$. To address the scalability challenges of massive associative memories, we implement a hybrid inference engine utilizing \textbf{FAISS-IVF}, enabling $O(\log M)$ search complexity with negligible fidelity loss. Furthermore, we propose a biologically inspired \textbf{Mitosis} mechanism that triggers structural growth when an expert reaches information saturation, as measured by Shannon entropy and familiarity depletion. We validate MoRE-3 on real-text benchmarks using the AG News dataset, demonstrating $100\%$ accuracy in classification, $100\%$ vigilance in novelty detection, and surgical 3-to-4 expert expansion. This work paves the way for frugal, sovereign AI systems capable of continuous adaptation in non-stationary environments. \textbf{Code is available at: \url{https://github.com/biggs-100/MoRE}}.
+Modern deep learning architectures are fundamentally limited by their static structural capacity and their susceptibility to catastrophic forgetting. We introduce \textbf{MoRE-3} (\textit{Mixture of Resonance-Experts}), a hierarchical architecture that achieves autonomous structural evolution and intrinsic novelty detection via decentralized competition. At the core of MoRE-3 is the \textbf{R-Perceptron}, a neuro-symbolic unit that utilizes cosine resonance to distinguish known from unknown manifolds via a sigmoid novelty gate $g$. To address the scalability challenges of massive associative memories, we implement a hybrid inference engine utilizing \textbf{FAISS-IVF}, enabling $O(\log M)$ search complexity with negligible fidelity loss. Furthermore, we propose a biologically inspired \textbf{Mitosis} mechanism that triggers surgical structural growth when an expert reaches information saturation, as measured by Shannon entropy and familiarity depletion. We validate MoRE-3 on real-text benchmarks using the AG News dataset, demonstrating total convergence in classification, absolute vigilance in novelty detection, and autonomous expert expansion. This work paves the way for frugal, sovereign AI systems capable of continuous adaptation in non-stationary environments. \textbf{Code is available at: \url{https://github.com/biggs-100/MoRE}}.
 \end{abstract}
 
 \section{Introduction}
@@ -45,6 +48,16 @@ The quest for Artificial General Intelligence (AGI) has been dominated by the Tr
 In contrast, biological systems exhibit structural plasticity and intrinsic surprise detection. The human brain does not just update weights; it grows and specializes as it encounters new semantic domains. This process is governed by localized neuro-plasticity and the creation of specialized regions (experts) that resonate with specific sensory stimuli. Inspired by these principles, we propose the \textbf{Mixture of Resonance-Experts (MoRE-3)}. 
 
 MoRE-3 departs from traditional Mixture-of-Experts (MoE) \citep{shazeer2017moe} by replacing the global, gradient-trained router with a decentralized competitive process based on **Resonance**. This shift from global optimization to local resonance allows the system to remain stable (preserving old knowledge) while being plastic (acquiring new knowledge through structural expansion). Our architecture treats intelligence as a dynamic, growing organism rather than a static computational graph. By enabling autonomous mitosis, MoRE-3 can grow its specialized hardware-knowledge mapping in real-time, ensuring that its representation density always matches the complexity of the input manifold. This work establishes a novel paradigm where structural adaptation is the primary learning mechanism.
+
+The key contributions of this work are as follows:
+\begin{itemize}
+    \item A decentralized neuro-symbolic architecture (\textbf{MoRE-3}) that achieves autonomous structural evolution via resonance competition rather than global gradient optimization.
+    \item A biologically inspired \textbf{Mitosis} mechanism that triggers surgical expert expansion based on information entropy and familiarity saturation, resolving the stability-plasticity dilemma.
+    \item A scalable hybrid inference engine utilizing \textbf{FAISS-IVF} to maintain $O(\log M)$ retrieval complexity in massive associative memories with negligible fidelity loss.
+\end{itemize}
+
+\section{Related Work}
+MoRE-3 extends the work on **Hopfield Networks** \citep{hopfield1982neural} and **Memory-Augmented Neural Networks** \citep{graves2016hybrid}. Our novelty gating mechanism is unique in its integration with structural plasticity. Compared to standard **Mixture-of-Experts** \citep{shazeer2017moe}, MoRE-3 is fully autonomous in its expert creation. We also draw inspiration from **Prototypical Networks** \citep{snell2017prototypical} and modern **Dense Hopfield Networks** \citep{ramsauer2020hopfield}, which have shown that associative memory can be scaled to handle complex data manifolds. Our work is also related to the field of **Continual Learning**, where the goal is to prevent forgetting in non-stationary streams.
 
 \section{Foundations of Resonant Associative Learning}
 \subsection{The Problem of Novelty Blindness in Modern AI}
@@ -63,6 +76,44 @@ In a MoRE-3 expert, the output is generated by a weighted retrieval of values $\
 \mathbf{y} = \sum_{j=1}^M \alpha_j \mathbf{v}_j
 \end{equation}
 where $\boldsymbol{\alpha}$ is the attention vector calculated via a competition process. This attention is a function of similarity, prototype importance, and a diversity bias that prevents the system from focusing on a single point of the manifold. The resonance signal $s_j$ provides a direct measure of how well the input "fits" into the expert's current worldview, acting as an implicit likelihood estimation of the data given the internal model.
+
+\begin{figure}[h]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.5cm,
+        expert/.style={rectangle, draw=accent, fill=light, thick, minimum width=2cm, minimum height=1cm, align=center},
+        router/.style={ellipse, draw=highlight, fill=light, thick, minimum width=2.5cm, minimum height=1cm},
+        arrow/.style={-Stealth, thick},
+        label/.style={font=\footnotesize\itshape}
+    ]
+        % Router
+        \node (router) [router] {Resonant Router};
+        \node (input) [left=of router] {Input $\mathbf{x}$};
+        \draw [arrow] (input) -- (router);
+
+        % Experts
+        \node (e1) [expert, below left=1cm and 0.5cm of router] {Expert $E_1$ \\ (Politics)};
+        \node (e2) [expert, below=1cm of router] {Expert $E_2$ \\ (Sports)};
+        \node (e3) [expert, below right=1cm and 0.5cm of router] {Expert $E_3$ \\ (Tech)};
+
+        % Resonance Arrows
+        \draw [arrow] (router) -- (e1) node[midway, left, label] {$f_1, g_1$};
+        \draw [arrow] (router) -- (e2) node[midway, right, label] {$f_2, g_2$};
+        \draw [arrow] (router) -- (e3) node[midway, right, label] {$f_3, g_3$};
+
+        % Mitosis Event (Visualized as a transition)
+        \node (mitosis) [expert, dashed, below=1.5cm of e1, draw=highlight] {Mitosis Event};
+        \draw [arrow, dashed, draw=highlight] (e1) -- (mitosis) node[midway, right, highlight, label] {$H > \theta_h$};
+
+        \node (e1a) [expert, below left=0.8cm and 0.3cm of mitosis] {$E_{1a}$ \\ (Politics)};
+        \node (e1b) [expert, below right=0.8cm and 0.3cm of mitosis] {$E_{1b}$ \\ (Health)};
+        \draw [arrow] (mitosis) -- (e1a);
+        \draw [arrow] (mitosis) -- (e1b);
+
+    \end{tikzpicture}
+    \caption{The MoRE-3 Architecture and Surgical Mitosis. The router distributes inputs based on local resonance. When an expert (e.g., $E_1$) encounters semantic saturation, it undergoes mitosis to create specialized daughter units.}
+    \label{fig:architecture}
+\end{figure}
 
 \section{The R-Perceptron Architecture}
 \subsection{Parameterization and Structural State}
@@ -164,6 +215,9 @@ The experiment was conducted in three distinct phases:
     \item **Phase 3 (Post-Mitosis Mastery):** Validating the final system's ability to classify all 4 categories. We measure the "mastery time" required for the new expert to reach parity with the original ones.
 \end{enumerate}
 
+\subsection{Reproducibility Statement}
+The MoRE-3 architecture and all experiments described in this paper are fully reproducible. The complete source code, including the R-Perceptron implementation, the FAISS-IVF integration, and the evolutionary demo script (\texttt{final\_integrated\_demo.py}), is available at the official repository: \url{https://github.com/biggs-100/MoRE}. Detailed hyperparameter settings and hardware environment specifications are provided in Section \ref{sec:impl_details} of the Appendix to ensure transparent scientific verification.
+
 \section{Results and Performance Analysis}
 \subsection{Ablation Study: Threshold Sensitivity Analysis}
 We performed a sweep of the resonance threshold $\theta \in [0.1, 0.9]$.
@@ -210,14 +264,15 @@ MoRE-3 can operate effectively on consumer-grade hardware (e.g., 4GB VRAM GPUs).
 \subsection{Data Sovereignty and Privacy}
 Because learning is local and resonant, it enables implementations where models learn from private user data without the need for cloud-based fine-tuning. This is critical for medical or personal applications where data privacy is paramount. A MoRE-3 system can "evolve" alongside its user without ever exposing sensitive data to a central server. This "Sovereign AI" paradigm is a direct challenge to the centralized, data-hungry models of Big Tech. We believe that privacy is a fundamental human right that should be embedded in the architecture of AI.
 
-\section{Related Work}
-MoRE-3 extends the work on **Hopfield Networks** \citep{hopfield1982neural} and **Memory-Augmented Neural Networks** \citep{graves2016hybrid}. Our novelty gating mechanism is unique in its integration with structural plasticity. Compared to standard **Mixture-of-Experts** \citep{shazeer2017moe}, MoRE-3 is fully autonomous in its expert creation. We also draw inspiration from **Prototypical Networks** \citep{snell2017prototypical} and modern **Dense Hopfield Networks** \citep{ramsauer2020hopfield}, which have shown that associative memory can be scaled to handle complex data manifolds. Our work is also related to the field of **Continual Learning**, where the goal is to prevent forgetting in non-stationary streams.
 
 \section{Future Directions: Architectural Fusion and Collective Intelligence}
 The next evolution of MoRE-3 involves the fusion of resonant memory with **State-Space Models (SSM)**. By replacing the traditional Attention mechanism in architectures like Mamba-3 with MoRE-3 Resonance Layers, we can achieve infinite-context reasoning with constant-time inference. Furthermore, we are investigating **Distributed MoRE**, where experts reside on different edge devices and coordinate via low-bandwidth resonance signals. This would enable a "Collective Intelligence" composed of millions of localized, sovereign experts, mirroring the social structures of ants or honeybees. We are also exploring the use of **Quantum Resonance** to further accelerate search in high-dimensional manifolds.
 
 \section{Ethical Considerations of Autonomous AI}
 The ability for an AI to grow its own structure raises unique ethical questions. We must ensure that the mitosis trigger is grounded in human-aligned semantic boundaries. Furthermore, the decentralized nature of MoRE-3 means that "bad" knowledge can be surgically removed without destroying the entire intelligence, a feature that could be used for safer AI alignment. We call for a new framework of "Neuro-Structural Ethics" to govern the evolution of these self-organizing systems and prevent the emergence of chaotic or harmful structural patterns.
+
+\section{Limitations and Future Work}
+While MoRE-3 demonstrates surgical structural plasticity, current mitosis triggers rely on calibrated entropy thresholds that may vary across extremely high-dimensional embedding spaces. Furthermore, the reliance on a frozen feature extractor, while efficient, may limit the system's ability to learn domain-specific low-level features in highly specialized fields. Future work will investigate self-tuning vigilance parameters to automate these thresholds across diverse modalities and explore the integration of trainable feature extractors that co-evolve with the expert hierarchy.
 
 \section{Conclusion}
 MoRE-3 presents a viable path toward self-organizing intelligence. By combining resonance, surprise detection, and autonomous growth, we have created a system that is not just a model, but a living cognitive structure. The demonstration of surgical mitosis 3-to-4 validates that structural evolution is a practical approach to building lifelong-learning AI. We believe this work represents a critical step towards frugal, autonomous, and sovereign general intelligence. The R-Perceptron and the mitosis mechanism provide the building blocks for a new era of AI that is as resilient and adaptive as biological life itself.
