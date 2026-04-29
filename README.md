@@ -97,4 +97,4 @@ The mathematical foundations and formal proof of resonance-based stability are d
 This project is licensed under the MIT License.
 
 ---
-*Developed by biggs-100 and Antigravity. Architecture is the ultimate regularizer.*
+*Developed by biggs-100. Architecture is the ultimate regularizer.*
