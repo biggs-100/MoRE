@@ -94,7 +94,7 @@ python robustness_audit.py
 The MoRE-3 implementation underwent a deep technical audit in April 2026 to ensure **Absolute Truth** in research reporting.
 - **Fixed**: Voting head index desynchronization during mitosis.
 - **Fixed**: Resonance gating logic for sigmoid novelty detectors.
-- **Verified**: Multi-seed statistical consistency matching the `MoRE3_Formal_Paper.tex` manuscript.
+- **Verified**: Multi-seed statistical consistency matching the internal research manuscript.
 - **Honesty**: All plots and metrics are synchronized with the master reproduction suite results.
 
 ---
