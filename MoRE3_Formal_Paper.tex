@@ -120,11 +120,11 @@ Upon triggering mitosis, the expert's experience buffer $\mathcal{B}$ is partiti
 \REQUIRE Experience Buffer $\mathcal{B}$, Thresholds $\theta_h, \theta_f$
 \STATE $\bar{f} \gets \text{mean}(f \in \mathcal{B})$
 \STATE $H \gets \text{ShannonEntropy}(\text{Attn} \in \mathcal{B})$
-\IF{$\bar{f} < \theta_f$ \AND $H > \theta_h$}
+\IF{$\bar{f} < \theta_f$ \textbf{and} $H > \theta_h$}
     \STATE $\mathcal{C}_1, \mathcal{C}_2 \gets \text{K-Means}(\mathcal{B}, k=2)$
-    \STATE $\text{Create DaughterExperts}(E_1, E_2)$
-    \STATE $\text{Initialize } E_1 \text{ with } \mathcal{C}_1, E_2 \text{ with } \mathcal{C}_2$
-    \STATE $\text{Replace ParentExpert in Router}$
+    \STATE \textbf{Create DaughterExperts} $E_1, E_2$
+    \STATE \textbf{Initialize} $E_1$ \text{with} $\mathcal{C}_1$, $E_2$ \text{with} $\mathcal{C}_2$
+    \STATE \textbf{Replace} \text{ParentExpert in Router}
 \ENDIF
 \end{algorithmic}
 \end{algorithm}
@@ -139,13 +139,13 @@ The global router in MoRE-3 is a competitive process where experts "bid" for an 
 \caption{Decentralized Resonant Routing}
 \begin{algorithmic}[1]
 \REQUIRE Input $\mathbf{x}$, Experts $\mathcal{E} = \{E_1, \dots, E_n\}$
-\FOR{each expert $E_i \in \mathcal{E}$}
+\FOR{\textbf{each} expert $E_i \in \mathcal{E}$}
     \STATE $f_i, g_i, \mathbf{y}_i \gets E_i.\text{forward}(\mathbf{x})$
 \ENDFOR
-\STATE $k \gets \text{argmax}(f_i \cdot (1-g_i))$ \COMMENT{Select expert with highest resonance and lowest novelty}
-\STATE $\text{Final Output } \mathbf{y} \gets \mathbf{y}_k$
-\STATE $\text{Global Surprise } G \gets \min(g_i)$
-\RETURN $\mathbf{y}, G$
+\STATE $k \gets \text{argmax}_i (f_i \cdot (1-g_i))$ \hfill \COMMENT{Winner selection}
+\STATE \textbf{Final Output} $\mathbf{y} \gets \mathbf{y}_k$
+\STATE \textbf{Global Surprise} $G \gets \min_i (g_i)$
+\STATE \textbf{return} $\mathbf{y}, G$
 \end{algorithmic}
 \end{algorithm}
 
