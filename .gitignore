@@ -37,7 +37,6 @@ embeddings_cache.pkl
 *.tex
 *.toc
 *.pdf
-!MoRE3_Formal_Paper.pdf
 
 # Drafts
 MoRE3_Research_Paper.md
