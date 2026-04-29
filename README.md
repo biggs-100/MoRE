@@ -1,11 +1,11 @@
-# MoRE-3: Modular Resonance Experts (v3.0)
+# MoRE-3: Mixture of Resonance Experts (v3.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FAISS](https://img.shields.io/badge/Search-FAISS-green.svg)](https://github.com/facebookresearch/faiss)
 [![Lifelong Learning](https://img.shields.io/badge/Learning-Lifelong-orange.svg)](#)
 
-**MoRE-3** is a high-performance neuro-symbolic architecture designed for **Autonomous Lifelong Learning** without catastrophic forgetting. By replacing global backpropagation with **Modular Resonance** and **Biological Mitosis**, MoRE-3 grows its structure dynamically to accommodate new knowledge while surgically preserving old memories.
+**MoRE-3** is a high-performance neuro-symbolic architecture designed for **Autonomous Lifelong Learning** without catastrophic forgetting. By replacing global backpropagation with **Mixture of Resonance Experts** and **Biological Mitosis**, MoRE-3 grows its structure dynamically to accommodate new knowledge while surgically preserving old memories.
 
 ---
 
