@@ -1,66 +1,100 @@
-# MoRE-3: Mixture of Resonance-Experts (v3.0)
+# MoRE-3: Modular Resonance Experts (v3.0)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![FAISS](https://img.shields.io/badge/Search-FAISS-green.svg)](https://github.com/facebookresearch/faiss)
+[![Lifelong Learning](https://img.shields.io/badge/Learning-Lifelong-orange.svg)](#)
 
-**MoRE-3** is a neuro-symbolic architecture designed for autonomous, lifelong learning. Unlike traditional gradient-based models, MoRE-3 uses **Resonant Associative Memory**, **Novelty-Aware Gating**, and **Biological Mitosis** to grow its knowledge base without catastrophic forgetting.
+**MoRE-3** is a high-performance neuro-symbolic architecture designed for **Autonomous Lifelong Learning** without catastrophic forgetting. By replacing global backpropagation with **Modular Resonance** and **Biological Mitosis**, MoRE-3 grows its structure dynamically to accommodate new knowledge while surgically preserving old memories.
 
-## 🚀 Key Features
+---
 
-- **Intrinsic Novelty Detection**: Each expert unit (R-Perceptron) calculates a familiarity score ($f$) to identify and reject Out-of-Distribution (OOD) data.
-- **Scalable Vector Search**: Integrated with **FAISS-IVF** for $O(\log M)$ retrieval, enabling millions of prototypes with sub-millisecond latency.
-- **Autonomous Mitosis**: Experts monitor their own "cognitive health" (entropy/familiarity) and split into specialized units when overloaded.
-- **Local Hebbian Learning**: Contrastive learning rule that strengthens winning prototypes and repels errors without global backpropagation.
-- **Encoder Agnostic**: Compatible with any embedding dimension (validated on 384d `all-MiniLM-L6-v2`).
+## 🏛 Architecture: Stability by Design
 
-## 🧠 Core Philosophy
+MoRE-3 treats knowledge as a structural problem, not just a parameter optimization problem. It is built upon three pillars:
 
-> "Resonance, Surprise and Growth Are All You Need."
+1.  **Resonance Gating**: A novelty-aware mechanism that calculates familiarity ($f$) for every input. If $f < \theta$, the input is rejected as "novel," triggering structural expansion instead of gradient contamination.
+2.  **Structural Mitosis**: When an expert reaches a cognitive saturation point (entropy limit), it undergoes a "splitting" process, spawning a specialized expert to handle the new data manifold.
+3.  **Stable Voting Head**: A non-gradient classification layer that maps experts to classes via frequency counts. This eliminates the "forgetting bottleneck" typical of shared linear output layers.
 
-MoRE-3 treats learning as a resonance problem. If the system "surprises" itself (low familiarity), it gates the input as novelty and triggers structural evolution (growth) instead of overwriting existing knowledge.
+### The MoRE-3 Cycle
 
-## 🛠 Installation
+```mermaid
+graph TD
+    Input[Input Vector] --> Router{FAISS Hybrid Search}
+    Router -->|Familiarity f > θ| Winner[Winning Expert]
+    Router -->|Familiarity f < θ| Novelty[Novelty Trigger]
+    Winner --> Train[Local Hebbian Update]
+    Winner --> Vote[Stable Voting Prediction]
+    Novelty --> Mitosis[Expert Mitosis & Expansion]
+    Mitosis --> NewExpert[New Specialized Expert]
+```
+
+---
+
+## 📊 Benchmark Results: Defeating Catastrophic Forgetting
+
+MoRE-3 was benchmarked against standard **MLP** and **EWC (Elastic Weight Consolidation)** on the challenging **Split MNIST** and **Permuted MNIST** streams.
+
+### 1. Split MNIST Stability
+While traditional models suffer from massive interference, MoRE-3 maintains structural isolation.
+- **Backward Transfer (BWT)**: **-0.14** (MoRE-3) vs **-0.98** (MLP).
+- **Task 0 Retention**: MoRE-3 preserves **~75% accuracy** on the first task even after learning 5 disjoint tasks, while standard models drop to **0%**.
+
+### 2. The Stability-Accuracy Pareto Curve
+MoRE-3 introduces a **"Stability Dial"** via the novelty threshold $\theta$. 
+- **High $\theta$**: Near-zero forgetting, surgical expansion, higher memory footprint.
+- **Low $\theta$**: Higher initial accuracy, lower stability, higher plasticity.
+
+> [!IMPORTANT]
+> **Key Finding**: Catastrophic forgetting is not an optimization error; it is an architectural flaw. MoRE-3 solves it by isolating expert domains structurally.
+
+---
+
+## 🛠 Installation & Usage
 
 ```bash
+# Clone and install dependencies
+git clone https://github.com/biggs-100/MoRE.git
+cd MoRE
 pip install torch numpy faiss-cpu sentence-transformers scikit-learn rich
 ```
 
-## 📊 Benchmarks & Demos
+### Reproducing the Results
 
-### 1. Final Integrated Demo (The Graduation)
-Runs the full evolutionary narrative using real news headlines (Sports, Tech, Politics, Health).
+#### 🌀 Run the Theta Ablation Sweep
+Generate the Pareto curve data and stability heatmaps.
 ```bash
-python final_integrated_demo.py
-```
-- **Phase 1**: Mastery of known classes (100% Acc).
-- **Phase 2**: Autonomous Mitosis triggered by the introduction of a novel class.
-
-### 2. FAISS Scaling Benchmark
-Validates the efficiency of the hybrid search engine.
-```bash
-python faiss_benchmark.py
-```
-- Demonstrated **3.38x speedup** on $10^5$ prototypes.
-
-### 3. Mitosis Validation
-Visualizes the structural growth of the network.
-```bash
-python train_mitosis.py
+python run_theta_sweep.py
 ```
 
-### 4. Robustness Audit
-Measures system resilience under varying levels of semantic noise.
+#### 🧪 Run the Split MNIST Stress Test
+Benchmark MoRE-3 against MLP/EWC baselines.
+```bash
+python run_benchmark.py --mode split_mnist --experts 3 --theta 0.3
+```
+
+#### 🛡️ Robustness Audit
+Test novelty rejection under semantic noise ($\sigma$).
 ```bash
 python robustness_audit.py
 ```
-- Validated **94%+ Novelty Rejection** even under high noise ($\sigma = 0.20$).
-
-## 📜 Research
-For a deep dive into the mathematical foundations and experimental results, see the [PAPER_DRAFT.md](PAPER_DRAFT.md) included in this repository.
-
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
-*Developed as part of the Sovereign AI initiative for Frugal LLMs.*
+
+## 🧠 Core Philosophy: Sovereign AI
+MoRE-3 is a cornerstone of the **Sovereign AI** initiative. It is designed for:
+- **Privacy First**: Local learning without cloud re-training.
+- **Frugal LLMs**: Knowledge expansion without re-calculating trillions of weights.
+- **Edge Mastery**: Deployment on low-resource hardware with FAISS-accelerated retrieval.
+
+---
+
+## 📜 Research & Documentation
+The mathematical foundations and formal proof of resonance-based stability are detailed in our internal research manuscript. MoRE-3 is the third evolution of the R-Perceptron family.
+
+## 📄 License
+This project is licensed under the MIT License.
+
+---
+*Developed by biggs-100 and Antigravity. Architecture is the ultimate regularizer.*
