@@ -1,0 +1,14 @@
+
+\begin{table}[h]
+\centering
+\caption{Statistical Validation on Split MNIST (3-seed average)}
+\begin{tabular}{lcc}
+\hline
+Model & ACC ($\uparrow$) & BWT ($\uparrow$) \\
+\hline
+MLP & 0.1284 $\pm$ 0.0388 & -0.7643 $\pm$ 0.0451 \\
+EWC & 0.1015 $\pm$ 0.0019 & -0.7732 $\pm$ 0.0376 \\
+\textbf{MoRE-3} & \textbf{0.2485 $\pm$ 0.0087} & \textbf{-0.2042 $\pm$ 0.0301} \\
+\hline
+\end{tabular}
+\end{table}
