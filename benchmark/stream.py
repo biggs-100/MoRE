@@ -20,6 +20,10 @@ class TaskStream:
         elif mode == 'split_cifar':
             self.dataset = datasets.CIFAR100(root='./data', train=True, download=True, transform=transforms.ToTensor())
             self.classes_per_task = 100 // n_tasks
+        elif mode == 'multidomain_mnist_fashion':
+            self.mnist = datasets.MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
+            self.fashion = datasets.FashionMNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
+            self.classes_per_task = 10 // n_tasks
             
     def __iter__(self):
         self.current_task = 0
@@ -79,6 +83,21 @@ class TaskStream:
                 idx = torch.randperm(len(X))[:self.max_samples_per_task]
                 X, y = X[idx], y[idx]
             
+            return X, y, task_id
+            
+        if self.mode == 'multidomain_mnist_fashion':
+            # Task 0: MNIST, Task 1: FashionMNIST
+            dataset = self.mnist if task_id == 0 else self.fashion
+            
+            # Simple binary split for demo: 0-4 or 5-9
+            # But let's just take all 10 classes and filter by max_samples
+            X = dataset.data.view(-1, 784).float() / 255.0
+            y = dataset.targets
+            
+            if self.max_samples_per_task and len(X) > self.max_samples_per_task:
+                idx = torch.randperm(len(X))[:self.max_samples_per_task]
+                X, y = X[idx], y[idx]
+                
             return X, y, task_id
             
         raise ValueError(f"Unknown mode: {self.mode}")

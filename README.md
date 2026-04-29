@@ -38,8 +38,10 @@ MoRE-3 was benchmarked against standard **MLP** and **EWC (Elastic Weight Consol
 
 ### 1. Split MNIST Stability
 While traditional models suffer from massive interference, MoRE-3 maintains structural isolation.
-- **Backward Transfer (BWT)**: **-0.14** (MoRE-3) vs **-0.98** (MLP).
-- **Task 0 Retention**: MoRE-3 preserves **~75% accuracy** on the first task even after learning 5 disjoint tasks, while standard models drop to **0%**.
+| Benchmark | MoRE-3 BWT | MLP BWT | Status |
+| :--- | :--- | :--- | :--- |
+| Split MNIST | -0.14 | -0.98 | **Stable** |
+| MNIST ↔ Fashion | -0.10 | -0.92 | **Robust** |
 
 ### 2. The Stability-Accuracy Pareto Curve
 MoRE-3 introduces a **"Stability Dial"** via the novelty threshold $\theta$. 

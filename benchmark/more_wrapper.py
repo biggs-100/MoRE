@@ -54,3 +54,9 @@ class MoREBenchmarkWrapper:
         # Usamos los conteos como 'logits' para que el MetricEngine sea feliz
         logits = self.expert_counts[winner_experts]
         return logits
+        
+    def evaluate(self, X, y):
+        logits = self.predict(X)
+        preds = logits.argmax(dim=1)
+        acc = (preds == y).float().mean()
+        return acc.item()
