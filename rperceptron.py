@@ -14,10 +14,11 @@ class RPerceptron(nn.Module):
     R-Perceptron: A resonant unit with lateral inhibition (WTA),
     diversity bias, importance decay, and optional FAISS scaling.
     """
-    def __init__(self, d_input, M, topk=3, gamma=0.1, decay=0.999, theta=0.5, beta=10.0, use_faiss=True, faiss_threshold=1024):
+    def __init__(self, d_input, M, n_classes=10, topk=3, gamma=0.1, decay=0.999, theta=0.5, beta=10.0, use_faiss=True, faiss_threshold=1024):
         super().__init__()
         self.d_input = d_input
         self.M = M
+        self.n_classes = n_classes
         self.topk = min(topk, M)
         self.gamma = gamma
         self.decay = decay
@@ -33,11 +34,15 @@ class RPerceptron(nn.Module):
         
         # Importance: weight of each prototype
         self.register_buffer('s', torch.ones(M))
+
+        # Stable Voting Head: frequency-based class mapping V
+        # Immunity to catastrophic forgetting by avoiding gradient-based classification
+        self.register_buffer('v', torch.zeros(n_classes))
         
         # FAISS scaling
+        self.index = None
         self.use_faiss = use_faiss and FAISS_AVAILABLE
         self.faiss_threshold = faiss_threshold
-        self.index = None
         if self.use_faiss and self.M >= self.faiss_threshold:
             self._rebuild_index()
 
@@ -144,3 +149,24 @@ class RPerceptron(nn.Module):
             # Sync FAISS index if modified
             if self.use_faiss and self.M >= self.faiss_threshold:
                 self._rebuild_index()
+
+    def update_voting(self, true_label):
+        """
+        Updates the frequency counts for the voting head.
+        Non-gradient update that maps experts to classes via evidence.
+        """
+        with torch.no_grad():
+            if isinstance(true_label, torch.Tensor):
+                if true_label.dim() == 0:
+                    label = int(true_label.item())
+                    if 0 <= label < self.n_classes:
+                        self.v[label] += 1
+                else:
+                    for label in true_label:
+                        l_idx = int(label.item())
+                        if 0 <= l_idx < self.n_classes:
+                            self.v[l_idx] += 1
+            else:
+                l_idx = int(true_label)
+                if 0 <= l_idx < self.n_classes:
+                    self.v[l_idx] += 1

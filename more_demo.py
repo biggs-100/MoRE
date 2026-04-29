@@ -13,12 +13,13 @@ class MoRE(nn.Module):
     """
     MoRE: Mixture of R-Experts with Autonomous Mitosis.
     """
-    def __init__(self, n_experts, d_input, M, topk=3, gamma=0.1, decay=0.999, theta=0.5):
+    def __init__(self, n_experts, d_input, M, n_classes=10, topk=3, gamma=0.1, decay=0.999, theta=0.5):
         super().__init__()
         self.d_input = d_input
         self.M = M
+        self.n_classes = n_classes
         self.experts = nn.ModuleList([
-            RPerceptron(d_input, M, topk, gamma, decay, theta) 
+            RPerceptron(d_input, M, n_classes, topk, gamma, decay, theta) 
             for _ in range(n_experts)
         ])
         
@@ -76,9 +77,28 @@ class MoRE(nn.Module):
         return winner_experts, max_fam, y, g, all_attn
 
     def predict(self, x, threshold=0.5):
+        """
+        Uses the Stable Voting Head (argmax of frequency counts) for classification.
+        Immune to catastrophic forgetting.
+        """
         winner_experts, max_fam, _, g, _ = self.forward(x)
-        final_preds = torch.where((g > 0) & (max_fam > threshold), winner_experts, -1)
-        return final_preds, max_fam
+        batch_size = x.size(0)
+        
+        preds = torch.full((batch_size,), -1, dtype=torch.long, device=x.device)
+        
+        for i in range(batch_size):
+            if g[i] > 0 and max_fam[i] > threshold:
+                exp_idx = winner_experts[i]
+                # argmax of the frequency counts V in the winning expert
+                # If counts are all zero (new expert), it returns 0 or -1
+                counts = self.experts[exp_idx].v
+                if counts.sum() > 0:
+                    preds[i] = counts.argmax()
+                else:
+                    # Optional: fallback to expert index or -1
+                    preds[i] = -1 
+                    
+        return preds, max_fam
 
     def perform_mitosis(self, expert_idx):
         if not SKLEARN_AVAILABLE: return False
@@ -91,12 +111,16 @@ class MoRE(nn.Module):
         centroids = kmeans.cluster_centers_
         
         old_expert = self.experts[expert_idx]
-        e1 = RPerceptron(self.d_input, self.M, old_expert.topk, 
+        e1 = RPerceptron(self.d_input, self.M, self.n_classes, old_expert.topk, 
                          old_expert.gamma, old_expert.decay, old_expert.theta)
-        e2 = RPerceptron(self.d_input, self.M, old_expert.topk, 
+        e2 = RPerceptron(self.d_input, self.M, self.n_classes, old_expert.topk, 
                          old_expert.gamma, old_expert.decay, old_expert.theta)
         
+        # Inherit voting state (daughter experts share parent's expertise initially)
         with torch.no_grad():
+            e1.v.copy_(old_expert.v)
+            e2.v.copy_(old_expert.v)
+            
             for i, centroid in enumerate(centroids):
                 new_keys = torch.from_numpy(centroid).float().repeat(self.M, 1)
                 new_keys += torch.randn_like(new_keys) * 0.05 # Break symmetry

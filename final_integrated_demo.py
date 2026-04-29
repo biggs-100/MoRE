@@ -41,11 +41,14 @@ def run_grand_finale():
     y_all = torch.cat([y_train, y_novel])
 
     # 2. Model Initialization with Bootstrap
-    model = MoRE(n_experts=3, d_input=384, M=32, theta=0.4)
+    model = MoRE(n_experts=3, d_input=384, M=32, n_classes=4, theta=0.4)
     with torch.no_grad():
         for i in range(3):
             model.experts[i].keys.copy_(centers[i].repeat(32, 1) + torch.randn(32, 384)*0.01)
             model.experts[i]._normalize_keys()
+            # Initial Voting Bootstrap: Experts 0, 1, 2 map to classes 0, 1, 2
+            # Use weak prior to allow dynamic re-mapping during discovery
+            model.experts[i].v[i] = 1.0 
 
     # --- PHASE 1: REINFORCEMENT ---
     console.print("\n[bold green]PHASE 1: Reinforcing Sports, Tech, and Politics...[/bold green]")
@@ -63,6 +66,9 @@ def run_grand_finale():
             for s_idx in range(len(x_b)):
                 exp_idx = winners[s_idx]
                 model.experts[exp_idx].update_local(x_b[s_idx:s_idx+1], reward[s_idx:s_idx+1], all_attn[s_idx], lr=lr)
+                # STABLE VOTING HEAD: Map evidence to the winning expert
+                # We update the voting head whenever an expert wins resonance
+                model.experts[exp_idx].update_voting(y_b[s_idx])
             progress.update(task, advance=1)
 
     # Initial Validation
@@ -96,9 +102,12 @@ def run_grand_finale():
             exp_idx = winners[s_idx]
             if exp_idx < len(model.experts):
                 model.experts[exp_idx].update_local(x_b[s_idx:s_idx+1], reward[s_idx:s_idx+1], all_attn[s_idx], lr=lr)
+                # STABLE VOTING HEAD: Learn the mapping for the novel class
+                model.experts[exp_idx].update_voting(y_b[s_idx])
         
         if step % 20 == 0:
-            splits = model.check_health_and_mitosis()
+            # Use thresholds consistent with the formal paper for stable growth
+            splits = model.check_health_and_mitosis(threshold_f=0.4, threshold_h=0.2)
             if splits and growth_step == -1:
                 growth_step = step
                 console.log(f"[bold reverse green] !!! MITOSIS !!! [/bold reverse green] Architecture expanded at step {step}. Experts: [bold cyan]{len(model.experts)}[/bold cyan]")

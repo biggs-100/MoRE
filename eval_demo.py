@@ -53,7 +53,7 @@ if __name__ == "__main__":
     _, _, centers = generate_clusters(n_clusters=N_EXPERTS, d=D_INPUT)
     
     # Cargar modelo
-    model = MoRE(N_EXPERTS, D_INPUT, M_PROTOS)
+    model = MoRE(N_EXPERTS, D_INPUT, M_PROTOS, n_classes=N_EXPERTS)
     try:
         model.load_state_dict(torch.load("more_model.pt"))
         model.eval()

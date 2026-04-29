@@ -48,6 +48,9 @@ def train_more(model, X_train, y_train, epochs=20, lr=0.01):
                     attn_e = all_attn[e_idx][mask]
                     
                     expert.update_local(x_e, r_e, attn_e, lr=lr)
+                    # STABLE VOTING HEAD: Map evidence to the winning expert
+                    for label in y_batch[mask]:
+                        expert.update_voting(label)
             
             total_reward += reward.sum().item()
             correct_preds += (winners == y_batch).sum().item()
@@ -68,7 +71,7 @@ if __name__ == "__main__":
     X, y, centers = generate_clusters(n_clusters=N_EXPERTS, d=D_INPUT, n_samples=200)
     
     # Model
-    model = MoRE(N_EXPERTS, D_INPUT, M_PROTOS, topk=5, gamma=0.5, decay=0.995)
+    model = MoRE(N_EXPERTS, D_INPUT, M_PROTOS, n_classes=N_EXPERTS, topk=5, gamma=0.5, decay=0.995)
     
     # Train
     train_more(model, X, y, epochs=30, lr=0.05)
