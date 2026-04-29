@@ -46,3 +46,6 @@ data/
 results/
 *.json
 *.tar.gz
+
+.atl/
+paper_rperceptron.md
