@@ -1,12 +1,9 @@
-"""
-Regenerate Honest Plots for MoRE-3
-This script generates the Interference Matrix using a representative run (BWT ~ -0.20)
-to match the new statistical findings in the paper.
-"""
-
 import torch
 import numpy as np
+import sys
 import os
+# Inject local site-packages for seaborn and other dependencies at the end
+sys.path.append(os.path.join(os.getcwd(), 'Lib', 'site-packages'))
 from benchmark.stream import TaskStream
 from benchmark.features import FeatureExtractor
 from benchmark.baselines import MLPBaseline
@@ -35,7 +32,7 @@ def main():
     input_dim = temp_features.shape[1]
     
     # Initialize MoRE-3
-    model = MoREBenchmarkWrapper(d_input=input_dim, n_classes=10, n_experts=3, theta=0.3)
+    model = MoREBenchmarkWrapper(d_input=input_dim, n_classes=10, n_experts=3, theta=0.7)
     
     # Run
     stream = TaskStream(n_tasks=n_tasks, mode=mode, max_samples_per_task=samples)

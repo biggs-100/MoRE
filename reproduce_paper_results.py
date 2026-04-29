@@ -75,7 +75,7 @@ def reproduce_all():
     mnist_results = {}
     
     for m in models:
-        res = run_multi_seed_experiment(m, 'split_mnist', n_tasks=5, samples=500, n_seeds=3, theta=0.3)
+        res = run_multi_seed_experiment(m, 'split_mnist', n_tasks=5, samples=500, n_seeds=3, theta=0.7)
         mnist_results[m] = res
         console.log(f"Model: [bold cyan]{m:4}[/bold cyan] | ACC: {res['acc_mean']:.4f} ± {res['acc_std']:.4f} | BWT: {res['bwt_mean']:.4f} ± {res['bwt_std']:.4f}")
     
