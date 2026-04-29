@@ -41,3 +41,8 @@ embeddings_cache.pkl
 # Drafts
 MoRE3_Research_Paper.md
 PAPER_DRAFT.md
+# Data and Results
+data/
+results/
+*.json
+*.tar.gz

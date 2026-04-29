@@ -49,6 +49,13 @@ Visualizes the structural growth of the network.
 python train_mitosis.py
 ```
 
+### 4. Robustness Audit
+Measures system resilience under varying levels of semantic noise.
+```bash
+python robustness_audit.py
+```
+- Validated **94%+ Novelty Rejection** even under high noise ($\sigma = 0.20$).
+
 ## 📜 Research
 For a deep dive into the mathematical foundations and experimental results, see the [PAPER_DRAFT.md](PAPER_DRAFT.md) included in this repository.
 

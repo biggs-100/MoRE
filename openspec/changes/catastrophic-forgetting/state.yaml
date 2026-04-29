@@ -1,0 +1,16 @@
+# openspec/changes/catastrophic-forgetting/state.yaml
+change_name: catastrophic-forgetting
+status: planning
+current_phase: tasks
+completed_phases:
+  - init
+  - explore
+  - spec
+  - design
+  - tasks
+next_phase: apply
+artifacts:
+  spec: openspec/specs/forgetting_benchmark.md
+  config: openspec/config.yaml
+  design: openspec/changes/catastrophic-forgetting/design.md
+  tasks: openspec/changes/catastrophic-forgetting/tasks.md

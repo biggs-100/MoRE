@@ -26,7 +26,7 @@ def train_with_mitosis():
     model = MoRE(N_INITIAL_EXPERTS, D_INPUT, M_PROTOS, theta=0.5)
     
     console.log("[bold green]Phase 1: Training on A, B, C[/bold green]")
-    lr = 0.1
+    lr = 0.02
     steps = 400
     
     for step in range(steps):
@@ -90,8 +90,8 @@ def train_with_mitosis():
             )
         
         # Trigger mitosis check
-        if step % 20 == 0:
-            splits = model.check_health_and_mitosis()
+        if step % 50 == 0:
+            splits = model.check_health_and_mitosis(threshold_f=0.45, threshold_h=1.0)
             if splits:
                 console.log(f"[bold reverse green] MITOSIS! [/bold reverse green] Expert {splits} split. Experts: {len(model.experts)}")
                 growth_occurred = True

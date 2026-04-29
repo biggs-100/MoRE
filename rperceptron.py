@@ -14,7 +14,7 @@ class RPerceptron(nn.Module):
     R-Perceptron: A resonant unit with lateral inhibition (WTA),
     diversity bias, importance decay, and optional FAISS scaling.
     """
-    def __init__(self, d_input, M, topk=3, gamma=0.1, decay=0.999, theta=0.5, use_faiss=True, faiss_threshold=1024):
+    def __init__(self, d_input, M, topk=3, gamma=0.1, decay=0.999, theta=0.5, beta=10.0, use_faiss=True, faiss_threshold=1024):
         super().__init__()
         self.d_input = d_input
         self.M = M
@@ -22,6 +22,7 @@ class RPerceptron(nn.Module):
         self.gamma = gamma
         self.decay = decay
         self.theta = theta # Novelty threshold
+        self.beta = beta   # Gate steepness
         
         # Associative memory: M prototypes (keys)
         self.keys = nn.Parameter(torch.randn(M, d_input))
@@ -102,8 +103,9 @@ class RPerceptron(nn.Module):
             
             scores = inhibited_scores
 
-        # Novelty Gate: g = 1 if familiar, 0 if novel
-        g = (max_similarity > self.theta).float()
+        # Novelty Gate: g = sigma(beta * (f - theta))
+        # This provides a smooth, differentiable awareness of the unknown.
+        g = torch.sigmoid(self.beta * (max_similarity - self.theta))
         
         # Final output: gating the similarity score
         y = max_similarity * g

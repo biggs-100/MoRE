@@ -1,27 +1,28 @@
-# Skill Registry - MoRE
-
-## User Skills
-| Skill | Trigger | Description |
-|-------|---------|-------------|
-| branch-pr | PR creation, opening a PR | PR workflow |
-| issue-creation | GitHub issue, bug report | Issue workflow |
-| judgment-day | review adversarial, dual review | Parallel review |
-| skill-creator | create new skill, agent instructions | Skill creation |
-
-## Project Conventions
-- **Language**: Python
-- **Testing**: pytest
-- **Workflow**: SDD (Spec-Driven Development)
-- **Local Learning**: Hebbian rules for expert adaptation.
+# Skill Registry
 
 ## Compact Rules
-### Python Standards
-- Use type hints for all function signatures.
-- Follow PEP 8 style guide.
-- Use `torch` for tensor operations.
-- Avoid global state; use classes for model encapsulation.
 
-### MoRE Architecture
-- Experts must inherit from `nn.Module`.
-- Use `RPerceptron` as the base expert unit.
-- Familiarity gate must be used for novelty detection.
+### python-research
+- Follow PEP8.
+- Use `torch` and `numpy` for all numerical operations.
+- Always implement `__repr__` or logging for structural changes (mitosis).
+- Use `Rich` for console outputs.
+
+### sdd-research
+- Every code change must have a corresponding test.
+- Benchmarks must save JSON results in `results/`.
+- Visualizations must use the `Agg` backend for Matplotlib.
+
+## User Skills
+
+| Skill | Trigger | Context |
+|-------|---------|---------|
+| sdd-apply | Launch implementation | Implementation phase |
+| sdd-verify | Validate changes | Verification phase |
+| sdd-tasks | Create breakdown | Planning phase |
+| sdd-spec | Write specs | Specification phase |
+| sdd-design | Write technical design | Design phase |
+| sdd-propose | Create proposal | Initiation phase |
+| sdd-explore | Investigate ideas | Exploration phase |
+| skill-creator | Create new skills | Documentation phase |
+| judgment-day | Review adversarial | Critical review phase |

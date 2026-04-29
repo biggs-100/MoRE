@@ -1,34 +1,36 @@
+# openspec/config.yaml
 schema: spec-driven
 
 context: |
-  Tech stack: Python 3.14, PyTorch, NumPy, Scikit-learn, Sentence-Transformers
-  Architecture: MoRE (Mixture of R-Experts)
-  Testing: pytest (Strict TDD Mode: enabled)
-  Style: PEP 8, Type hints, rich aesthetics
+  Tech stack: Python 3.14+, PyTorch, FAISS-IVF
+  Architecture: MoRE-3 (Mixture of Resonant Experts) with Autonomous Mitosis
+  Testing: Pytest (py -m pytest)
+  Style: PEP8 with strict type hinting (hints of high-impact research)
 
 strict_tdd: true
 
-rules:
-  proposal:
-    - Include novelty detection strategy
-    - Define expert architecture (R-Perceptron)
-  specs:
-    - Use Given/When/Then for scenarios
-    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
-  design:
-    - Detail Hebbian learning rules
-    - Document WTA inhibition logic
-  tasks:
-    - Group by phase, use hierarchical numbering
-    - Keep tasks small
-  apply:
-    - Follow established R-Perceptron patterns
-  verify:
-    - Run pytest for all unit tests
-    - Validate novelty gate threshold behavior
-
 testing:
-  strict_tdd: true
   runner:
     command: "py -m pytest"
-    framework: pytest
+    framework: "pytest"
+  layers:
+    unit: true
+    integration: true
+  coverage:
+    available: false
+
+rules:
+  proposal:
+    - Focus on empirical validation and ablation studies
+  specs:
+    - Use Given/When/Then for behavior validation
+  design:
+    - Document mitosis triggers and novelty gate logic
+  tasks:
+    - Group by Phase (Infrastructure, Baseline, Evaluation)
+  apply:
+    - Strict TDD (Red-Green-Refactor)
+  verify:
+    - Matplotlib results must be saved as artifacts
+  archive:
+    - Close JSON results into a central benchmark report
