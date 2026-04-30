@@ -27,6 +27,10 @@ class MoRE(nn.Module):
         self.buffers = [deque(maxlen=256) for _ in range(n_experts)]
         self.health_f = [deque(maxlen=100) for _ in range(n_experts)] # Recent familiarity
         self.health_h = [deque(maxlen=100) for _ in range(n_experts)] # Recent entropy
+        
+        # Self-tuning state
+        self.theta_f = [theta] * n_experts
+        self.theta_h_default = 0.1 # Default entropy threshold
         self.min_samples_mitosis = 128
         
     def forward(self, x):
@@ -145,19 +149,61 @@ class MoRE(nn.Module):
         self.health_h.insert(expert_idx, deque(maxlen=100))
         self.health_h.insert(expert_idx + 1, deque(maxlen=100))
         
+        self.theta_f.pop(expert_idx)
+        self.theta_f.insert(expert_idx, old_expert.theta)
+        self.theta_f.insert(expert_idx + 1, old_expert.theta)
+        
         return True
 
-    def check_health_and_mitosis(self, threshold_h=0.1, threshold_f=0.5):
+    def auto_calibrate_thresholds(self):
+        """
+        Auto-calibrates novelty (theta) and mitosis thresholds based on 
+        the statistical distribution of recent familiarities.
+        """
+        for i, expert in enumerate(self.experts):
+            if len(self.health_f[i]) >= 64:
+                f_data = np.array(list(self.health_f[i]))
+                
+                # theta_f (novelty gate): Percentile 10
+                # If familiarity drops below the bottom 10% of history, it's novel
+                new_theta = np.percentile(f_data, 10)
+                expert.theta = float(new_theta)
+                
+                # theta_h (mitosis threshold): Percentile 25
+                # We use this as a reference for 'familiarity saturation'
+                self.theta_f[i] = float(np.percentile(f_data, 25))
+
+    def check_health_and_mitosis(self, encoder=None, device=None, threshold_h=None, threshold_f=None):
+        """
+        Checks health deques and triggers mitosis.
+        MoRE-4: Triggers REA (Alignment) before Mitosis (Homeostasis First).
+        """
         split_indices = []
         for i in range(len(self.experts) - 1, -1, -1):
             if len(self.health_f[i]) >= 64:
                 avg_f = np.mean(self.health_f[i])
                 avg_h = np.mean(self.health_h[i])
                 
-                # MITOSIS TRIGGER: Surprise (low fam) AND moderate dispersion
-                if avg_f < threshold_f and avg_h > threshold_h:
-                    if self.perform_mitosis(i):
-                        split_indices.append(i)
+                # Use calibrated thresholds or falls back to defaults/arguments
+                cur_th_f = threshold_f if threshold_f is not None else self.theta_f[i]
+                cur_th_h = threshold_h if threshold_h is not None else self.theta_h_default
+                
+                # HOMEOPATHIC CHECK: Drift or Real Novelty?
+                if avg_f < cur_th_f:
+                    if encoder is not None and device is not None and len(self.experts[i].anchor_buffer.raw_data) >= 10:
+                        print(f"  [Drift Detect] Expert {i} familiarity low ({avg_f:.4f}). Attempting REA...")
+                        success = self.experts[i].align_to_encoder(encoder, device)
+                        if success:
+                            # Re-evaluating would require new data, so we reset health and defer mitosis
+                            self.health_f[i].clear()
+                            self.health_h[i].clear()
+                            print(f"  [Homeostasis] Expert {i} realigned. Mitosis deferred.")
+                            continue # Check next expert, give this one time to stabilize
+
+                    # If REA wasn't possible or didn't happen, check for Mitosis
+                    if avg_h > cur_th_h:
+                        if self.perform_mitosis(i):
+                            split_indices.append(i)
                         
         return split_indices
 
@@ -167,3 +213,16 @@ class MoRE(nn.Module):
             self.health_f[i].clear()
             self.health_h[i].clear()
             self.buffers[i].clear()
+
+    def realign_experts(self, encoder, device):
+        """
+        Triggers REA (Anchor Projection) for all experts that have enough anchors.
+        """
+        print("\n--- [MoRE-4 REA] Global Alignment Phase ---")
+        for i, expert in enumerate(self.experts):
+            if len(expert.anchor_buffer.raw_data) >= 10:
+                success = expert.align_to_encoder(encoder, device)
+                if success:
+                    print(f"  Expert {i}: Alignment Successful.")
+                else:
+                    print(f"  Expert {i}: Alignment Failed (No Anchors).")

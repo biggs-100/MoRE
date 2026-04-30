@@ -38,9 +38,6 @@ def train_more(model, X_train, y_train, epochs=20, lr=0.01):
             
             # Actualizar expertos
             for e_idx, expert in enumerate(model.experts):
-                # Solo el experto que gano se actualiza para cada ejemplo
-                # (aunque la regla local Hebbiana podria aplicarse a todos, 
-                # aqui forzamos competencia MoE)
                 mask = (winners == e_idx)
                 if mask.any():
                     x_e = x_batch[mask]
@@ -51,6 +48,9 @@ def train_more(model, X_train, y_train, epochs=20, lr=0.01):
                     # STABLE VOTING HEAD: Map evidence to the winning expert
                     for label in y_batch[mask]:
                         expert.update_voting(label)
+            
+            # AUTO-CALIBRATION HOOK: Calibrate thresholds based on batch familiarities
+            model.auto_calibrate_thresholds()
             
             total_reward += reward.sum().item()
             correct_preds += (winners == y_batch).sum().item()

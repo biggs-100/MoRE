@@ -9,13 +9,15 @@ try:
 except ImportError:
     FAISS_AVAILABLE = False
 
-class RPerceptron(nn.Module):
+from alignment_core import AlignableModule
+
+class RPerceptron(AlignableModule):
     """
     R-Perceptron: A resonant unit with lateral inhibition (WTA),
     diversity bias, importance decay, and optional FAISS scaling.
     """
     def __init__(self, d_input, M, n_classes=10, topk=3, gamma=0.1, decay=0.999, theta=0.5, beta=10.0, use_faiss=True, faiss_threshold=1024):
-        super().__init__()
+        super().__init__(d_input)
         self.d_input = d_input
         self.M = M
         self.n_classes = n_classes
@@ -25,6 +27,7 @@ class RPerceptron(nn.Module):
         self.theta = theta # Novelty threshold
         self.beta = beta   # Gate steepness
         
+
         # Associative memory: M prototypes (keys)
         self.keys = nn.Parameter(torch.randn(M, d_input))
         self._normalize_keys()
@@ -58,10 +61,9 @@ class RPerceptron(nn.Module):
         self.index.add(keys_np)
 
     def forward(self, x):
-        """
-        Forward pass with WTA inhibition and novelty gating.
-        Hybrid mode: uses FAISS for large M, dense dot product for small M.
-        """
+        # 0. Apply Alignment if needed
+        x = self.apply_alignment(x)
+        
         x = F.normalize(x, p=2, dim=1)
         batch_size = x.size(0)
         
@@ -117,7 +119,7 @@ class RPerceptron(nn.Module):
         
         return winner_indices, max_similarity, y, g, scores
 
-    def update_local(self, x, reward, all_attn, lr=0.01):
+    def update_local(self, x, reward, all_attn, lr=0.01, raw_x=None):
         """
         Reward-modulated Hebbian update.
         """
@@ -145,6 +147,13 @@ class RPerceptron(nn.Module):
             
             self._normalize_keys()
             self.s *= self.decay
+            
+            # Record anchors during training
+            if self.anchor_buffer.is_full() is False and raw_x is not None:
+                # We save a fraction of samples as anchors
+                # x is aligned features, raw_x is the raw input
+                for i in range(min(4, x.size(0))): 
+                    self.anchor_buffer.add(raw_x[i], x[i])
             
             # Sync FAISS index if modified
             if self.use_faiss and self.M >= self.faiss_threshold:

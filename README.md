@@ -13,8 +13,8 @@
 
 MoRE-3 treats knowledge as a structural problem, not just a parameter optimization problem. It is built upon three pillars:
 
-1.  **Resonance Gating**: A novelty-aware mechanism that calculates familiarity ($f$) for every input. If $f < \theta$, the input is rejected as "novel," triggering structural expansion instead of gradient contamination.
-2.  **Structural Mitosis**: When an expert reaches a cognitive saturation point (entropy limit), it undergoes a "splitting" process, spawning a specialized expert to handle the new data manifold.
+1.  **Resonance Gating**: A novelty-aware mechanism that calculates familiarity ($f$) for every input. The threshold $\theta$ is **self-calibrated** per expert based on historical recognition statistics, eliminating manual hyperparameter tuning.
+2.  **Structural Mitosis**: When an expert reaches a cognitive saturation point (entropy limit), it undergoes a "splitting" process. Mitosis triggers are dynamically tuned using a data-driven percentile system.
 3.  **Stable Voting Head**: A non-gradient classification layer that maps experts to classes via frequency counts. This eliminates the "forgetting bottleneck" typical of shared linear output layers.
 
 ### The MoRE-3 Cycle
@@ -45,6 +45,7 @@ While traditional models suffer from massive interference, MoRE-3 maintains stru
 
 ### 2. The Stability-Accuracy Pareto Curve
 MoRE-3 introduces a **"Stability Dial"** via the novelty threshold $\theta$. 
+- **Autonomous Calibration**: In MoRE-3 v3.0, the "Stability Dial" is automated. The system self-tunes its thresholds to the optimal balance point based on the data distribution's percentile statistics.
 - **High $\theta$**: Near-zero forgetting, surgical expansion, higher memory footprint.
 - **Low $\theta$**: Higher initial accuracy, lower stability, higher plasticity.
 
