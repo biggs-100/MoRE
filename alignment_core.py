@@ -15,6 +15,10 @@ class AnchorBuffer:
         self.raw_data = deque(maxlen=max_size)
         self.embeddings = deque(maxlen=max_size)
 
+    def clear(self):
+        self.raw_data.clear()
+        self.embeddings.clear()
+
     def add(self, raw_x, h):
         """
         raw_x: Raw data sample (e.g. image)
@@ -53,6 +57,7 @@ class AlignableModule(nn.Module):
     def align_to_encoder(self, encoder, device):
         """
         Learns the W_align matrix to map encoder_new(anchors) -> h_old.
+        Supports MIMO anchors (batch, rank, dim).
         """
         x_anchor, h_old = self.anchor_buffer.get_anchors()
         if x_anchor is None:
@@ -61,8 +66,6 @@ class AlignableModule(nn.Module):
         x_anchor = x_anchor.to(device)
         h_old = h_old.to(device)
         
-        # Reset W_align to identity before starting? 
-        # Or keep current to refine? Let's reset for stability.
         with torch.no_grad():
             self.W_align.weight.copy_(torch.eye(self.d_latent).to(device))
             
@@ -76,7 +79,10 @@ class AlignableModule(nn.Module):
             with torch.no_grad():
                 h_new = encoder(x_anchor)
             
+            # W_align handles (batch, rank, dim) by applying to the last dim
             h_aligned = self.W_align(h_new)
+            
+            # Frobenius norm / MSE for the whole MIMO matrix
             loss = F.mse_loss(h_aligned, h_old)
             loss.backward()
             optimizer.step()
@@ -99,15 +105,23 @@ class GradientsProjector:
         self.threshold = threshold
         self.bases = {} # expert_id -> basis matrix
 
-    def update_basis(self, expert_id, raw_anchors):
+    def update_basis(self, expert_id, anchor_features):
         """
-        Computes the orthogonal basis of the subspace spanned by anchors using SVD.
+        Computes the orthogonal basis of the subspace spanned by anchor features using SVD.
+        Mamba-3: "calculates an orthonormal basis Vi of its anchor features h_anc".
+        Supports MIMO shapes by flattening [Batch, Rank, Dim] -> [Batch * Rank, Dim].
         """
         with torch.no_grad():
-            # x: [N, D] where D is flattened raw input dim
-            x = raw_anchors.view(raw_anchors.size(0), -1)
+            # Flatten batch and MIMO rank dimensions
+            # x shape: [N * R, d_latent]
+            x = anchor_features.view(-1, anchor_features.size(-1))
+            
+            # Center the data for more robust SVD
+            x_mean = torch.mean(x, dim=0)
+            x = x - x_mean
             
             # SVD to find principal components
+            # We use full_matrices=False for efficiency
             U, S, V = torch.svd(x)
             
             # Keep components that explain 'threshold' of variance
@@ -115,7 +129,7 @@ class GradientsProjector:
             k = torch.where(energy > self.threshold)[0][0].item() + 1
             
             # Basis is the first k columns of V
-            self.bases[expert_id] = V[:, :k].detach() # [D, k]
+            self.bases[expert_id] = V[:, :k].detach() # [d_latent, k]
 
     def project(self):
         """
@@ -125,24 +139,22 @@ class GradientsProjector:
         if not self.bases:
             return
 
-        with torch.no_grad():
-            # Find the first linear layer in the encoder
-            target_param = None
-            for name, param in self.encoder.named_parameters():
-                if "weight" in name and param.grad is not None:
-                    target_param = param
-                    break # Usually the first layer is the most critical for OGD
-            
-            if target_param is None:
-                return
-
-            for expert_id in self.bases:
-                B = self.bases[expert_id] # [D, k]
-                # Grad g: [Out, D]
-                g = target_param.grad
+        # Project the gradients of all layers that produce the latent space
+        for name, param in self.encoder.named_parameters():
+            if param.grad is not None:
+                # g shape: [Out, In] or [Out]
+                g = param.grad
                 
-                # Projection: g_proj = g - (g @ B) @ B.T
-                # g @ B: [Out, k]
-                # (g @ B) @ B.T: [Out, D]
-                proj = torch.matmul(torch.matmul(g, B), B.t())
-                target_param.grad.sub_(proj)
+                for expert_id in self.bases:
+                    B = self.bases[expert_id] # [d_latent, k]
+                    
+                    # Projecting the output dimension (rows) of the weight matrix
+                    if g.size(0) == B.size(0):
+                        # proj = B @ (B.T @ g)
+                        proj = torch.matmul(B, torch.matmul(B.t(), g))
+                        param.grad.sub_(proj)
+                    # Projecting the input dimension (cols) if it matches (less common but possible)
+                    elif g.size(-1) == B.size(0):
+                        # proj = (g @ B) @ B.T
+                        proj = torch.matmul(torch.matmul(g, B), B.t())
+                        param.grad.sub_(proj)
