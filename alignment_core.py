@@ -72,20 +72,22 @@ class AlignableModule(nn.Module):
         self.W_align.train()
         encoder.eval()
         
-        optimizer = torch.optim.Adam(self.W_align.parameters(), lr=0.01)
+        optimizer = torch.optim.Adam(self.W_align.parameters(), lr=0.05)
         
-        for _ in range(100):
+        for _ in range(500):
             optimizer.zero_grad()
             with torch.no_grad():
                 h_new = encoder(x_anchor)
             
-            # W_align handles (batch, rank, dim) by applying to the last dim
+            # Ensure shapes match for MSE loss
+            h_new = h_new.view(h_old.shape)
             h_aligned = self.W_align(h_new)
             
-            # Frobenius norm / MSE for the whole MIMO matrix
             loss = F.mse_loss(h_aligned, h_old)
             loss.backward()
             optimizer.step()
+
+
             
         self.W_align.eval()
         self.needs_alignment = False

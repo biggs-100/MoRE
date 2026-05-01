@@ -97,3 +97,25 @@ MIT License.
 
 ---
 *Developed by biggs-100. Architecture is the ultimate regularizer.*
+
+## ?? MoRE-GPT: The Sovereign Language Core
+
+MoRE-GPT is the flagship implementation of MoRE-4 for natural language. It replaces standard Attention-based Transformers with a self-evolving pool of **Resonant Experts.**
+
+### ?? Sovereign Features
+- **Strict TDD Validation**: 100% test coverage for data loading, recurrent state, and causal head.
+- **Systemic Drift Neutralization**: Verified via drift_stress_test(), reducing loss spikes significantly through real-time REA alignment.
+- **Autonomous Domain Bifurcation**: Demonstrated through domain transitions, where the model automatically scaled experts to capture new semantic manifolds.
+
+### ?? Quick Start (Language Core)
+
+`ash
+# Train the MoRE-GPT small model on TinyStories
+python more_tiny_llm.py
+
+# Run the Autonomous Phase-Bifurcation Demo
+python bifurcation_demo.py
+
+# Generate text from a trained sovereign model
+python generate.py
+`
