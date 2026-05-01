@@ -6,9 +6,9 @@
 \hline
 Model & ACC ($\uparrow$) & BWT ($\uparrow$) \\
 \hline
-MLP & 0.1284 $\pm$ 0.0388 & -0.7643 $\pm$ 0.0451 \\
-EWC & 0.1015 $\pm$ 0.0019 & -0.7732 $\pm$ 0.0376 \\
-\textbf{MoRE-3} & \textbf{0.3573 $\pm$ 0.0753} & \textbf{-0.1225 $\pm$ 0.0580} \\
+MLP & 0.1835 $\pm$ 0.0056 & -0.9786 $\pm$ 0.0017 \\
+EWC & 0.1858 $\pm$ 0.0054 & -0.9766 $\pm$ 0.0032 \\
+\textbf{MoRE-3} & \textbf{0.2104 $\pm$ 0.0085} & \textbf{-0.3464 $\pm$ 0.0791} \\
 \hline
 \end{tabular}
 \end{table}

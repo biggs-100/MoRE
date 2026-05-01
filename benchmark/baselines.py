@@ -83,3 +83,60 @@ class EWCBaseline(MLPBaseline):
                 
                 (loss + self.lambda_ewc * ewc_loss).backward()
                 self.optimizer.step()
+
+class ERBaseline(MLPBaseline):
+    def __init__(self, input_dim, n_classes, lr=1e-3, mem_size=200):
+        super().__init__(input_dim, n_classes, lr)
+        self.mem_size = mem_size
+        self.buffer_X = []
+        self.buffer_y = []
+        
+    def train_task(self, X, y, task_id, epochs=5, batch_size=64):
+        self.model.train()
+        dataset = torch.utils.data.TensorDataset(X, y)
+        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        
+        for epoch in range(epochs):
+            for batch_X, batch_y in loader:
+                self.optimizer.zero_grad()
+                
+                # Forward pass on current data
+                output = self.model(batch_X)
+                loss = self.criterion(output, batch_y)
+                
+                # Experience Replay
+                if len(self.buffer_X) > 0:
+                    # Sample from buffer
+                    idx = torch.randperm(len(self.buffer_X))[:batch_size]
+                    buf_X = torch.stack([self.buffer_X[i] for i in idx])
+                    buf_y = torch.stack([self.buffer_y[i] for i in idx])
+                    
+                    buf_out = self.model(buf_X)
+                    loss += self.criterion(buf_out, buf_y)
+                
+                loss.backward()
+                self.optimizer.step()
+                
+        # Update Buffer (Reservoir sampling approximation for simplicity here)
+        for i in range(len(X)):
+            if len(self.buffer_X) < self.mem_size:
+                self.buffer_X.append(X[i])
+                self.buffer_y.append(y[i])
+            else:
+                j = torch.randint(0, self.current_total_samples + i + 1, (1,)).item()
+                if j < self.mem_size:
+                    self.buffer_X[j] = X[i]
+                    self.buffer_y[j] = y[i]
+                    
+    @property
+    def current_total_samples(self):
+        if not hasattr(self, '_total_seen'):
+            self._total_seen = 0
+        return self._total_seen
+        
+    def consolidate(self, X, y):
+        # Update total seen counter for reservoir sampling
+        if not hasattr(self, '_total_seen'):
+            self._total_seen = 0
+        self._total_seen += len(X)
+

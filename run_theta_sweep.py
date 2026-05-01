@@ -17,14 +17,14 @@ def main():
     print(f"Starting High-Density Theta Sweep for MoRE-3 on {mode}...")
     
     for theta in thetas:
-        cmd = f"{python_exe} run_benchmark.py --mode {mode} --n_tasks {n_tasks} --model more --theta {theta} --n_experts 5 --samples {samples}"
+        cmd = f"uv run --python 3.11 --with torch --with torchvision --with numpy --with requests --with matplotlib --with rich --with faiss-cpu py run_benchmark.py --mode {mode} --n_tasks {n_tasks} --model more --theta {theta} --n_experts 5 --samples {samples} --seed 101"
         try:
             run_cmd(cmd)
         except Exception as e:
             print(f"Error during theta={theta}: {e}")
             
     print("\nSweep complete. Generating Pareto plot...")
-    run_cmd(f"{python_exe} -m benchmark.visualizer")
+    run_cmd(f"uv run --python 3.11 --with torch --with torchvision --with numpy --with requests --with matplotlib --with rich --with faiss-cpu py -m benchmark.visualizer")
 
 if __name__ == "__main__":
     main()

@@ -30,8 +30,8 @@ class MoRE(nn.Module):
         
         # Self-tuning state
         self.theta_f = [theta] * n_experts
-        self.theta_h_default = 0.1 # Default entropy threshold
-        self.min_samples_mitosis = 128
+        self.theta_h_default = 0.5 # Increased from 0.05 to prevent explosion
+        self.min_samples_mitosis = 512 # Increased from 256 to allow more stabilization
         
     def forward(self, x):
         batch_size = x.size(0)
@@ -49,17 +49,19 @@ class MoRE(nn.Module):
         
         y = torch.zeros(batch_size, device=x.device)
         g = torch.zeros(batch_size, device=x.device)
+        proto_winners = torch.zeros(batch_size, dtype=torch.long, device=x.device)
         all_attn = []
         
         for i in range(batch_size):
             exp_idx = winner_experts[i]
             res = all_results[exp_idx]
+            proto_winners[i] = res[0][i]
             y[i] = res[2][i]
             g[i] = res[3][i]
             
             # Scores from RPerceptron (top_scores if FAISS, else inhibited_scores)
-            scores = res[4]
-            all_attn.append(scores)
+            scores = res[4] # (batch, M)
+            all_attn.append(scores[i])
             
             # Monitoring
             self.buffers[exp_idx].append(x[i].detach().cpu().numpy())
@@ -78,29 +80,28 @@ class MoRE(nn.Module):
             h = -torch.sum(p * torch.log(p + 1e-9)).item()
             self.health_h[exp_idx].append(h)
             
-        return winner_experts, max_fam, y, g, all_attn
+        all_attn = torch.stack(all_attn, dim=0) # (batch, M)
+        return winner_experts, max_fam, y, g, all_attn, proto_winners
 
     def predict(self, x, threshold=0.5):
         """
         Uses the Stable Voting Head (argmax of frequency counts) for classification.
         Immune to catastrophic forgetting.
         """
-        winner_experts, max_fam, _, g, _ = self.forward(x)
+        winner_experts, max_fam, _, g, _, proto_winners = self.forward(x)
         batch_size = x.size(0)
         
         preds = torch.full((batch_size,), -1, dtype=torch.long, device=x.device)
         
         for i in range(batch_size):
-            if g[i] > 0 and max_fam[i] > threshold:
-                exp_idx = winner_experts[i]
-                # argmax of the frequency counts V in the winning expert
-                # If counts are all zero (new expert), it returns 0 or -1
-                counts = self.experts[exp_idx].v
-                if counts.sum() > 0:
-                    preds[i] = counts.argmax()
-                else:
-                    # Optional: fallback to expert index or -1
-                    preds[i] = -1 
+            exp_idx = winner_experts[i]
+            p_idx = proto_winners[i]
+            # argmax of the frequency counts V in the winning expert's prototype
+            counts = self.experts[exp_idx].v[p_idx]
+            if counts.sum() > 0:
+                preds[i] = counts.argmax()
+            else:
+                preds[i] = -1
                     
         return preds, max_fam
 
@@ -153,7 +154,29 @@ class MoRE(nn.Module):
         self.theta_f.insert(expert_idx, old_expert.theta)
         self.theta_f.insert(expert_idx + 1, old_expert.theta)
         
+        print(f"!!! [MITOSIS] Expert {expert_idx} split into two specialized units !!!")
         return True
+
+    def compute_geometric_bottleneck(self, expert_idx):
+        """
+        Calculates the condition number of the Gram Matrix of the expert's prototypes.
+        A high condition number (> d_model) indicates representational collapse/redundancy.
+        """
+        expert = self.experts[expert_idx]
+        with torch.no_grad():
+            # K: [M, d_input]
+            K = expert.keys
+            K_norm = K / (K.norm(dim=-1, keepdim=True) + 1e-8)
+            # G: [M, M]
+            G = torch.mm(K_norm, K_norm.t())
+            # SVD for condition number
+            try:
+                s = torch.linalg.svdvals(G)
+                # Ratio of max to min singular value
+                cond = s[0] / (s[-1] + 1e-8)
+                return cond.item()
+            except Exception:
+                return 1.0 # Fallback if SVD fails
 
     def auto_calibrate_thresholds(self):
         """
@@ -172,6 +195,24 @@ class MoRE(nn.Module):
                 # theta_h (mitosis threshold): Percentile 25
                 # We use this as a reference for 'familiarity saturation'
                 self.theta_f[i] = float(np.percentile(f_data, 25))
+
+    def landauer_loss(self, expert_idx):
+        """
+        Calculates the Landauer cost (k_B * T * ln(2)) for potential information erasure.
+        Encourages the model to justify the deletion of prototypes or experts.
+        """
+        # We use a simplified semantic temperature based on the expert's average familiarity
+        avg_f = np.mean(self.health_f[expert_idx]) if len(self.health_f[expert_idx]) > 0 else 1.0
+        T_sem = 1.0 / (avg_f + 1e-6) # Lower familiarity = Higher "Temperature" (more fluid/volatile)
+        
+        expert = self.experts[expert_idx]
+        # s is the importance/survival score
+        s = expert.s
+        
+        # Landauer Cost: k_B * T * ln(2) * (1 - s)
+        # This penalizes letting prototypes drift towards zero importance
+        cost = T_sem * np.log(2.0) * (1.0 - s)
+        return cost.mean()
 
     def check_health_and_mitosis(self, encoder=None, device=None, threshold_h=None, threshold_f=None):
         """
@@ -200,10 +241,21 @@ class MoRE(nn.Module):
                             print(f"  [Homeostasis] Expert {i} realigned. Mitosis deferred.")
                             continue # Check next expert, give this one time to stabilize
 
-                    # If REA wasn't possible or didn't happen, check for Mitosis
-                    if avg_h > cur_th_h:
-                        if self.perform_mitosis(i):
-                            split_indices.append(i)
+                # 2. GEOMETRIC BOTTLENECK CHECK (Early Warning)
+                cond_number = self.compute_geometric_bottleneck(i)
+                # If prototypes are becoming co-linear (redundant), it's a sign of collapse
+                # threshold is increased to 1000.0 to prevent expert inflation
+                geometric_alert = cond_number > 1000.0 
+
+                # 3. MITOSIS CHECK: Split if Blind (Low F) OR Confused (High H) OR Geometric Collapse
+                if avg_f < cur_th_f or avg_h > cur_th_h or geometric_alert:
+                    if geometric_alert:
+                        print(f"  [Geometric Alert] Expert {i} condition number high ({cond_number:.1f}). Mitosis recommended.")
+                    if self.perform_mitosis(i):
+                        split_indices.append(i)
+                
+                # 4. AUTO-CALIBRATION
+                self.auto_calibrate_thresholds()
                         
         return split_indices
 

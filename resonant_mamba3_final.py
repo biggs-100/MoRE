@@ -17,15 +17,23 @@ class ResonantMamba3Layer(AlignableModule):
         # 1. Input Projections
         self.in_proj = nn.Linear(d_model, rank * 4, bias=False)
         
-        # 2. Resonant Parameters (learned)
-        self.A_log = nn.Parameter(torch.log(torch.ones(rank))) # Real part (decay)
-        self.A_imag = nn.Parameter(torch.arange(rank).float() * (2 * np.pi / rank)) # Imaginary part (freq)
+        # 2. Physics-Anchored Parameters
+        # omega: "Quantum" Resonant frequencies (learned frequencies)
+        self.log_omega = nn.Parameter(torch.log(torch.arange(rank).float() + 1.0))
+        # T: "Thermal" Semantic Temperature (learned plasticity)
+        self.log_temp = nn.Parameter(torch.zeros(rank))
+        # nu: Decay parameter (for stability)
+        self.nu = nn.Parameter(torch.log(-torch.log(torch.rand(rank) * 0.9 + 0.1))) 
         
-        # 3. Data-Dependent Discretization & Phase
+        # 3. Hamiltonian / Symplectic Logic (Optional toggle)
+        self.use_symplectic = False 
+        
+        # 4. Data-Dependent Projections
         self.dt_proj = nn.Linear(d_model, rank, bias=False)
-        self.phase_proj = nn.Linear(d_model, rank, bias=False)
+        self.phase_proj = nn.Linear(d_model, rank, bias=False) # Modulation of phase
+        self.energy_proj = nn.Linear(d_model, rank, bias=False) # "Semantic Energy" input
         
-        # 4. Output Projection
+        # 5. Output Projection
         self.out_proj = nn.Linear(rank, d_model, bias=False)
         
         # Recurrent State (Complex) - Non-persistent
@@ -50,21 +58,26 @@ class ResonantMamba3Layer(AlignableModule):
             fidelity = torch.exp(-error / sigma)
         return fidelity
 
-    def mutate(self, scale=0.1):
+    def mutate_morse(self, axis, scale=0.1):
         """
-        Breaks symmetry for mitosis by perturbing frequencies and projections.
+        Breaks symmetry for mitosis by perturbing projections along the Morse axis.
         """
         with torch.no_grad():
-            # Perturb resonant frequencies (Imaginary part of A)
-            self.A_imag.add_(torch.randn_like(self.A_imag) * scale)
-            # Perturb input projections slightly
-            self.in_proj.weight.add_(torch.randn_like(self.in_proj.weight) * (scale * 0.1))
+            # Perturb projections along the axis to differentiate the daughter
+            # We treat the axis as a direction in the latent space
+            # and shift weights to be more 'sensitive' to that direction
+            perturbation = axis.unsqueeze(0) * scale # [1, d_model]
+            
+            # Affect the input projection (MIMO)
+            # perturbation is d_model, in_proj is [rank*4, d_model]
+            self.in_proj.weight.add_(torch.randn(self.rank*4, 1, device=axis.device) * perturbation)
+            
             # Clear anchor buffer for the new specialized manifold
             self.anchor_buffer.clear()
 
     def forward(self, x, reset_state=False):
         """
-        Forward pass with automatic REA alignment.
+        Forward pass with automatic REA alignment and Physics-Anchored Phase.
         x: [batch, d_model]
         """
         # Apply Homeostasis (REA)
@@ -75,30 +88,36 @@ class ResonantMamba3Layer(AlignableModule):
             self.reset_state(batch_size, x.device)
             
         # 1. Project to Internal Rank
-        # We split for gate, input, and other params
         projected = self.in_proj(x)
         gate, x_val, _, _ = torch.chunk(projected, 4, dim=-1)
         
-        # 2. Learn Discretization (dt) and Phase Rotation
-        dt = F.softplus(self.dt_proj(x))
-        phase = torch.tanh(self.phase_proj(x)) * np.pi
+        # 2. Physics-Anchored Phase Calculation
+        # φ = (hbar * omega) / (k_B * T) -> simplified to learned ratio for ML
+        omega = torch.exp(self.log_omega)
+        temp = torch.exp(self.log_temp)
+        phi_base = omega / (temp + 1e-6) # Anchored base frequency
         
-        # 3. Calculate Complex Evolution
-        # Continuous-to-Discrete (Euler-like for complex)
-        decay = torch.exp(-dt * torch.exp(self.A_log))
-        angle = dt * self.A_imag + phase
+        # 3. Data-Dependent Modulation
+        dt = F.softplus(self.dt_proj(x))
+        # Input-driven phase shift (perturbation of the physics-based anchor)
+        phase_shift = torch.tanh(self.phase_proj(x)) * np.pi
+        # Total Angle: anchored rotation + input-driven shift
+        angle = dt * (phi_base + phase_shift)
+        
+        # 4. Calculate Complex Evolution (Hardened Stability)
+        decay = torch.exp(-dt * torch.exp(self.nu))
         
         cos = torch.cos(angle)
         sin = torch.sin(angle)
         
-        # 4. Complex Recurrence: z_t = (z_{t-1} * exp(i*angle)) * decay + x_t
+        # 5. Complex Recurrence: z_t = (z_{t-1} * exp(i*angle)) * decay + x_t
         new_re = (self.state_re * cos - self.state_im * sin) * decay + torch.sigmoid(gate) * x_val
         new_im = (self.state_re * sin + self.state_im * cos) * decay
         
         self.state_re = new_re
         self.state_im = new_im
         
-        # 5. Output Projection
+        # 6. Output Projection
         out = self.out_proj(new_re)
         return out
 
@@ -188,19 +207,22 @@ class RM3ExpertPool(nn.Module):
 
     def perform_mitosis(self, expert_idx):
         """
-        Duplicates an expert and perturbs the daughter.
+        Duplicates an expert and perturbs the daughter along the Morse axis.
         """
-        import copy
         parent = self.experts[expert_idx]
-        # Deepcopy weight state
+        
+        # 1. Compute Morse Axis from parent anchors
+        axis = parent.compute_morse_axis()
+        
+        # 2. Duplication
         daughter = ResonantMamba3Layer(self.d_model, self.rank).to(parent.in_proj.weight.device)
         daughter.load_state_dict(parent.state_dict())
         
-        # Symmetry Breaking
-        daughter.mutate(scale=0.1)
+        # 3. Symmetry Breaking (Morse-directed)
+        daughter.mutate_morse(axis, scale=0.1)
         
         self.experts.append(daughter)
-        print(f"  [MITOSIS] Expert {expert_idx} split. Pool size: {len(self.experts)}")
+        print(f"  [MITOSIS] Expert {expert_idx} bifurcated along Morse Axis. Pool size: {len(self.experts)}")
 
 if __name__ == "__main__":
     print("Resonant Mamba-3 Module with Expert Pool Initialized.")

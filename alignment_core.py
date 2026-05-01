@@ -97,6 +97,26 @@ class AlignableModule(nn.Module):
         """Applies the learned alignment to the input embeddings."""
         return self.W_align(h)
 
+    def compute_morse_axis(self):
+        """
+        Computes the Morse Bifurcation Axis using PCA on the anchor buffer.
+        Corresponds to the direction of maximum local variance in the latent manifold.
+        """
+        raw_x, h_old = self.anchor_buffer.get_anchors()
+        if h_old is None or h_old.size(0) < 5:
+            # Fallback to random if not enough data
+            return torch.randn(self.d_latent, device=self.W_align.weight.device)
+            
+        # h_old shape might be [N, Dim] or [N, Rank, Dim]
+        data = h_old.view(-1, h_old.size(-1))
+        
+        # PCA via SVD
+        mean = data.mean(dim=0)
+        data_centered = data - mean
+        U, S, V = torch.pca_lowrank(data_centered, q=1)
+        
+        return V[:, 0]
+
 class GradientsProjector:
     """
     Resonant OGD (Orthogonal Gradient Descent) implementation.

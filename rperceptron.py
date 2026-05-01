@@ -37,10 +37,13 @@ class RPerceptron(AlignableModule):
         
         # Importance: weight of each prototype
         self.register_buffer('s', torch.ones(M))
+        
+        # Semantic Mass: resistance to change (inertia)
+        self.register_buffer('mass', torch.ones(M))
 
         # Stable Voting Head: frequency-based class mapping V
         # Immunity to catastrophic forgetting by avoiding gradient-based classification
-        self.register_buffer('v', torch.zeros(n_classes))
+        self.register_buffer('v', torch.zeros(M, n_classes))
         
         # FAISS scaling
         self.index = None
@@ -134,14 +137,19 @@ class RPerceptron(AlignableModule):
                 else:
                     w_idx = all_attn[i].argmax()
                 
-                # Hebbian rule
-                delta = lr * reward[i] * (x[i] - self.keys[w_idx])
+                # Inertial Update (Newton semántico: a = F/m)
+                # Force is the standard Hebbian delta
+                force = lr * reward[i] * (x[i] - self.keys[w_idx])
+                # Acceleration = Force / Mass
+                delta = force / (self.mass[w_idx] + 1e-6)
                 self.keys[w_idx] += delta
                 
-                # Update usage and importance
+                # Update usage, importance and MASS
                 if reward[i] > 0:
                     self.usage[w_idx] += 1
                     self.s[w_idx] *= 1.01
+                    # Mass grows with each successful activation (inercia acumulada)
+                    self.mass[w_idx] += 0.1 
                 else:
                     self.s[w_idx] *= 0.95
             
@@ -159,23 +167,54 @@ class RPerceptron(AlignableModule):
             if self.use_faiss and self.M >= self.faiss_threshold:
                 self._rebuild_index()
 
-    def update_voting(self, true_label):
+    def update_voting(self, true_label, win_indices):
         """
-        Updates the frequency counts for the voting head.
+        Updates the frequency counts for the voting head per prototype.
         Non-gradient update that maps experts to classes via evidence.
         """
         with torch.no_grad():
             if isinstance(true_label, torch.Tensor):
-                if true_label.dim() == 0:
-                    label = int(true_label.item())
-                    if 0 <= label < self.n_classes:
-                        self.v[label] += 1
-                else:
-                    for label in true_label:
-                        l_idx = int(label.item())
-                        if 0 <= l_idx < self.n_classes:
-                            self.v[l_idx] += 1
+                for i, label in enumerate(true_label):
+                    l_idx = int(label.item())
+                    p_idx = int(win_indices[i].item())
+                    if 0 <= l_idx < self.n_classes:
+                        self.v[p_idx, l_idx] += 1
             else:
                 l_idx = int(true_label)
+                p_idx = int(win_indices.item())
                 if 0 <= l_idx < self.n_classes:
-                    self.v[l_idx] += 1
+                    self.v[p_idx, l_idx] += 1
+
+    def compute_morse_axis(self):
+        """
+        Computes the Morse Bifurcation Axis using PCA on the anchor buffer.
+        The axis corresponds to the direction of maximum local variance (eigenvector
+        of the negative eigenvalue of the Hessian approximation).
+        """
+        if len(self.anchor_buffer.processed_features) < 10:
+            # Fallback to random if not enough data
+            return torch.randn(self.d_input, device=self.keys.device)
+            
+        # 1. Stack anchor features
+        data = torch.stack(self.anchor_buffer.processed_features) # [N, D]
+        
+        # 2. Compute Mean-Centered Covariance
+        mean = data.mean(dim=0)
+        data_centered = data - mean
+        
+        # 3. SVD for principal components
+        # V[0] is the direction of maximum variance (Morse Axis)
+        U, S, V = torch.pca_lowrank(data_centered, q=1)
+        
+        return V[:, 0]
+
+    def mutate_morse(self, axis, scale=0.1):
+        """
+        Perturbs prototypes along the Morse axis to break symmetry.
+        """
+        with torch.no_grad():
+            # Apply perturbation along the axis
+            # Some move forward, some backward along the axis
+            perturbation = axis.unsqueeze(0) * scale
+            self.keys.add_(perturbation * torch.randn(self.M, 1, device=self.keys.device))
+            self._normalize_keys()

@@ -13,7 +13,7 @@ def main():
     parser.add_argument('--mode', type=str, default='permuted_mnist', choices=['synthetic', 'permuted_mnist', 'split_mnist', 'split_cifar'])
     parser.add_argument('--n_tasks', type=int, default=5)
     parser.add_argument('--samples', type=int, default=1000)
-    parser.add_argument('--model', type=str, default='more', choices=['mlp', 'ewc', 'more'])
+    parser.add_argument('--model', type=str, default='more', choices=['mlp', 'ewc', 'er', 'more'])
     parser.add_argument('--theta', type=float, default=0.3)
     parser.add_argument('--n_experts', type=int, default=3)
     parser.add_argument('--seed', type=int, default=42)
@@ -40,6 +40,9 @@ def main():
         model = MLPBaseline(input_dim, n_classes)
     elif args.model == 'ewc':
         model = EWCBaseline(input_dim, n_classes, lambda_ewc=5000.0)
+    elif args.model == 'er':
+        from benchmark.baselines import ERBaseline
+        model = ERBaseline(input_dim, n_classes, mem_size=200)
     else:
         model = MoREBenchmarkWrapper(d_input=input_dim, n_classes=n_classes, n_experts=args.n_experts, theta=args.theta)
         

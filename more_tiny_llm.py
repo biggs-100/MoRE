@@ -98,10 +98,23 @@ def train_more_gpt(model, loader, epochs=5, lr=1e-3):
                     emb = model.tok_emb(x)
                 
                 logits = model(x, reset_state=True)
-                
                 # Reshape for loss
                 loss = criterion(logits.view(-1, model.vocab_size), y.view(-1))
-                loss.backward()
+                
+                # 4. Landauer Regularizer (Thermodynamic Homeostasis)
+                # We penalize 'volatility' in the expert pool
+                landauer_cost = 0
+                for i in range(len(model.expert_pool.experts)):
+                    # Simplified temperature for LLM context
+                    avg_f = model.expert_pool.experts[i].get_rea_fidelity(emb[:, 0, :]).mean().item()
+                    T_sem = 1.0 / (avg_f + 1e-6)
+                    # Landauer Cost: k_B * T * ln(2)
+                    # Here we penalize the magnitude of phase shifts as 'informational cost'
+                    landauer_cost += T_sem * 0.001 * torch.norm(model.expert_pool.experts[i].phase_proj.weight)
+                
+                # Total Loss = Task Loss + Landauer Penalty
+                total_step_loss = loss + landauer_cost
+                total_step_loss.backward()
                 optimizer.step()
                 
                 # Update REA anchors
@@ -111,7 +124,8 @@ def train_more_gpt(model, loader, epochs=5, lr=1e-3):
                 
             avg_loss = total_loss / n_batches
             
-            # Check for Mitosis
+            # Check for Mitosis (Homeostasis First)
+            # Mitigation of 'expert inflation' via calibrated thresholds
             model.expert_pool.check_mitosis()
             
             progress.update(task, advance=1, description=f"Epoch {epoch+1} | Loss: {avg_loss:.4f} | Experts: {len(model.expert_pool.experts)}")
