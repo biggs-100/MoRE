@@ -117,7 +117,9 @@ class RM3ExpertPool(nn.Module):
         self.fidelity_history = []
         self.window_size = 100
 
-    def forward(self, x, reset_state=False):
+        self.routing_penalty = 1.0 # Multiplier for unhealthy experts (default 1.0 = no penalty)
+
+    def forward(self, x, reset_state=False, forced_expert_idx=None):
         """
         Routes input to the most resonant expert and monitors for mitosis.
         """
@@ -125,17 +127,28 @@ class RM3ExpertPool(nn.Module):
             for expert in self.experts:
                 expert.reset_state(x.size(0), x.device)
 
-        # 1. Calculate Fidelity for all experts
-        fidelities = []
-        for expert in self.experts:
-            f = expert.get_rea_fidelity(x)
-            fidelities.append(f)
-        
-        fidelities = torch.stack(fidelities, dim=1) # [batch, n_experts]
-        
-        # 2. Select winner per sample in batch
-        winner_indices = torch.argmax(fidelities, dim=1)
-        max_fidelities = torch.max(fidelities, dim=1)[0]
+        if forced_expert_idx is not None:
+            # Force all samples in batch to use a specific expert
+            winner_indices = torch.full((x.size(0),), forced_expert_idx, dtype=torch.long, device=x.device)
+            max_fidelities = torch.ones((x.size(0),), device=x.device) # Dummy
+        else:
+            # 1. Calculate Fidelity for all experts
+            fidelities = []
+            for expert in self.experts:
+                f = expert.get_rea_fidelity(x) # [batch]
+                
+                # Apply Routing Penalty if expert is drifting
+                if expert.needs_alignment and self.routing_penalty != 1.0:
+                    f = f * self.routing_penalty
+                    
+                fidelities.append(f)
+            
+            fidelities = torch.stack(fidelities, dim=1) # [batch, n_experts]
+            
+            # 2. Select winner per sample in batch
+            winner_indices = torch.argmax(fidelities, dim=1)
+            max_fidelities = torch.max(fidelities, dim=1)[0]
+
         
         # 3. Aggregate output
         outputs = torch.zeros_like(x)
@@ -143,6 +156,7 @@ class RM3ExpertPool(nn.Module):
             mask = (winner_indices == i)
             if mask.any():
                 outputs[mask] = expert(x[mask], reset_state=reset_state)
+
         
         # 4. Monitor Health (Homeostasis) - Average across batch
         avg_fidelity = max_fidelities.mean().item()

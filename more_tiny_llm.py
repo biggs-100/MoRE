@@ -27,7 +27,7 @@ class MoREGPT(nn.Module):
         # Weight tieing (Optional but standard for small models)
         self.tok_emb.weight = self.head.weight
 
-    def forward(self, idx, reset_state=False):
+    def forward(self, idx, reset_state=False, forced_expert_idx=None):
         """
         Forward pass for sequences.
         idx: [batch, seq_len]
@@ -38,16 +38,10 @@ class MoREGPT(nn.Module):
         x = self.tok_emb(idx) # [batch, seq_len, d_model]
         
         # 2. Process through MoRE Pool
-        # Since RM3 is recurrent, we process token by token or use the internal loop
-        # For simplicity and to maintain state, we iterate over time steps
-        # but RM3ExpertPool's experts handle state internally.
-        
         outputs = []
         for i in range(t):
-            # Pass each time step. The experts in the pool maintain state_re/im.
-            # We reset state only at the first token if requested.
             step_reset = reset_state if i == 0 else False
-            step_out = self.expert_pool(x[:, i, :], reset_state=step_reset)
+            step_out = self.expert_pool(x[:, i, :], reset_state=step_reset, forced_expert_idx=forced_expert_idx)
             outputs.append(step_out)
             
         x = torch.stack(outputs, dim=1) # [batch, seq_len, d_model]
@@ -57,6 +51,7 @@ class MoREGPT(nn.Module):
         logits = self.head(x) # [batch, seq_len, vocab_size]
         
         return logits
+
 
     def update_anchors(self, idx, embeddings):
         """
