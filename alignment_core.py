@@ -72,9 +72,9 @@ class AlignableModule(nn.Module):
         self.W_align.train()
         encoder.eval()
         
-        optimizer = torch.optim.Adam(self.W_align.parameters(), lr=0.05)
+        optimizer = torch.optim.Adam(self.W_align.parameters(), lr=0.01)
         
-        for _ in range(500):
+        for _ in range(2000):
             optimizer.zero_grad()
             with torch.no_grad():
                 h_new = encoder(x_anchor)
